@@ -16,12 +16,17 @@
 #ifndef __CRVK_IMPLEMENTATION_HPP__
 #define __CRVK_IMPLEMENTATION_HPP__
 
+// c integer types
+#include <cstdint>
+
 //#define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
 #include <SDL3/SDL_vulkan.h>
 
 #define NO_SDL_VULKAN_TYPEDEFS
 #include <SDL3/SDL_vulkan.h>
+#include <SDL3/SDL_assert.h>
+#include <SDL3/SDL_stdinc.h>
 
 #define CR_VERBOSE 1
 
@@ -67,6 +72,9 @@ extern void vkLoadVulkanProcs( VkInstance in_instance );
 extern void vkLoadDeviceProcs( VkDevice in_device );
 extern void vkLoadVulkanDebugUtilsProcs( VkInstance in_instance );
 
+#include "crvkPointer.hpp"
 #include "crvkException.hpp"
+#include "crvkDeviceProperties.hpp"
+#include "crvkContext.hpp"
 
 #endif //__CRVK_IMPLEMENTATION_HPP__
