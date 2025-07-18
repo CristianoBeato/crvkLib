@@ -7,7 +7,7 @@ Feita pra quem quer desenvolver rápido, entender o pipeline, e não perder temp
 
 /
 
-Developed with the goal of bringing the simplicity and fluidity of OpenGL to the detailed (and sometimes cruel) world of Vulkan—all while maintaining the low-level control that Vulkan offers.
+Developed with the goal of bringing the **simplicity and fluidity of OpenGL** to the detailed (and sometimes cruel) world of Vulkan—all while maintaining the low-level control that Vulkan offers.
 
 Made for those who want to develop quickly, understand the pipeline, and avoid wasting time with tons of boilerplate.
 
