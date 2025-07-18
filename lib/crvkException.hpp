@@ -16,6 +16,9 @@
 #ifndef __CRVK_EXCEPTION_HPP__
 #define __CRVK_EXCEPTION_HPP__
 
+#include <exception>
+
+// get a error string from vulkan error code
 extern const char* crvkGetVulkanError( const VkResult errorCode );
 
 class crvkException : public std::exception

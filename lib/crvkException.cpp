@@ -16,13 +16,15 @@
 #include "crvkImplement.hpp"
 #include "crvkException.hpp"
 
+#include <cstdio>
+
 /*
 =================================================================================================
 =================================================================================================
 */
 crvkException::crvkException( const char* _error, const VkResult errorCode )
 {   
-    std::snprintf( err, 1024, "VkError: %s\n Code: %i\n %s\n", _error, errorCode, GetVulkanError( errorCode ) );
+    std::snprintf( err, 1024, "VkError: %s\n Code: %i\n %s\n", _error, errorCode, crvkGetVulkanError( errorCode ) );
 }
 
 const char *crvkGetVulkanError(const VkResult errorCode)
