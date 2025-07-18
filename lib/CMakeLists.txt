@@ -20,6 +20,10 @@ set( CRVK_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/crvkImplement.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/crvkException.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/crvkException.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/crvkDeviceProperties.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/crvkDeviceProperties.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/crvkContext.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/crvkContext.hpp
     )
 
 add_library( crvkLib STATIC ${CRVK_SOURCES} )
