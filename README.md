@@ -5,6 +5,14 @@ Desenvolvida com o objetivo de **trazer a simplicidade e fluidez do OpenGL** par
 
 Feita pra quem quer desenvolver rápido, entender o pipeline, e não perder tempo com toneladas de boilerplate.
 
+/
+
+Developed with the goal of bringing the simplicity and fluidity of OpenGL to the detailed (and sometimes cruel) world of Vulkan—all while maintaining the low-level control that Vulkan offers.
+
+Made for those who want to develop quickly, understand the pipeline, and avoid wasting time with tons of boilerplate.
+
+---
+
 ## 🎯 Objetivos / Objectives:
 
 - ✅ Reduzir a verbosidade típica do Vulkan
