@@ -22,6 +22,6 @@ set( CRVK_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/crvkException.hpp
     )
 
-add_library( crvkTest STATIC ${CRVK_SOURCES} )
-target_include_directories( crvkTest  PRIVATE ${CMAKE_SOURCE_DIR} )
-target_precompile_headers( crvkTest PUBLIC "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/crvkImplement.hpp>" )
+add_library( crvkLib STATIC ${CRVK_SOURCES} )
+target_include_directories( crvkLib  PRIVATE ${CMAKE_SOURCE_DIR} )
+target_precompile_headers( crvkLib PUBLIC "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/crvkImplement.hpp>" )
