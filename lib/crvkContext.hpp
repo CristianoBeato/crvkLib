@@ -16,7 +16,9 @@
 #ifndef __CRVK_CONTEXT_HPP__
 #define __CRVK_CONTEXT_HPP__
 
-class crvkDeviceProperties;
+#include <SDL3/SDL_error.h>
+
+class crvkDevice;
 class crvkContext
 {
 public:
@@ -31,50 +33,27 @@ public:
         const uint32_t in_layersCount 
     );
     
-    bool    InitializeDevice( 
-        const crvkDeviceProperties* in_device,
-        const char* in_layers, 
-        const uint32_t in_layersCount, 
-        const char* in_deviceExtensions, 
-        const uint32_t in_deviceExtensionsCount
-    );
-
     void    Destroy( void );
 
     VkInstance                  Instance( void ) const { return m_instance; }
     VkSurfaceKHR                Surface( void ) const { return m_surface; }
-    VkDevice                    Device( void ) const { return m_device; }
-    VkQueue                     GraphicsQueue( void ) const { return m_graphicsQueue; }
-    VkQueue                     PresentQueue( void ) const { return m_presentQueue; }
-    VkCommandPool               CommandPool( void ) const { return m_commandPool; }
-    VkAllocationCallbacks*      AllocationCallbacks( void ) const { return const_cast<VkAllocationCallbacks*>( &k_allocationCallbacks ); /*nullptr;*/ }
-
     const char*                 GetLastError( void ) ;
 
 protected:
-    void    AppendError( const char* in_error );
+    friend class crvkBufferStatic;
+    friend class crvkBufferStaging;
+    void    AppendError( const char* in_error ) const;
 
 private:
     bool                                m_enableValidationLayers;
     VkInstance                          m_instance;
     VkDebugUtilsMessengerEXT            m_debugMessenger;
     VkSurfaceKHR                        m_surface;
-    VkDevice                            m_device;
-    VkQueue                             m_graphicsQueue;
-    VkQueue                             m_presentQueue;
-    VkCommandPool                       m_commandPool;
     crvkPointer<VkPhysicalDevice>       m_physicalDeviceList;
-    crvkPointer<crvkDeviceProperties>   m_devicePropertiesList;
-    static const VkAllocationCallbacks  k_allocationCallbacks;
+    crvkPointer<crvkDevice*>            m_devicePropertiesList;
 
     bool CheckValidationLayerSupport( const char** in_layers, const uint32_t in_layersCount );
 
-    /// 
-    static VKAPI_ATTR void* VKAPI_CALL      Allocation( void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope );
-    static VKAPI_ATTR void* VKAPI_CALL      Reallocation( void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
-    static VKAPI_ATTR void  VKAPI_CALL      Free( void* pUserData, void* pMemory );
-    static VKAPI_ATTR void  VKAPI_CALL      InternalAllocation( void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope);
-    static VKAPI_ATTR void  VKAPI_CALL      InternalFree( void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope );
     static VKAPI_ATTR VkBool32 VKAPI_CALL   DebugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData );
 };
 

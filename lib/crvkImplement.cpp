@@ -15,6 +15,26 @@
 
 #include "crvkImplement.hpp"
 
+#include <cstdio>
+
+ /// 
+static VKAPI_ATTR void* VKAPI_CALL crvkAllocation( void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope );
+static VKAPI_ATTR void* VKAPI_CALL crvkReallocation( void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
+static VKAPI_ATTR void  VKAPI_CALL crvkFree( void* pUserData, void* pMemory );
+static VKAPI_ATTR void  VKAPI_CALL crvkInternalAllocation( void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope);
+static VKAPI_ATTR void  VKAPI_CALL crvkInternalFree( void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope );
+   
+// our onw allocation structure using SDL_malloc
+const VkAllocationCallbacks k_allocationCallbacks = 
+{
+    nullptr,
+    crvkAllocation,
+    crvkReallocation,
+    crvkFree,
+    crvkInternalAllocation,
+    crvkInternalFree
+};
+
 // VK_EXT_debug_utils
 #if VK_EXT_debug_utils
 PFN_vkCreateDebugUtilsMessengerEXT          vkCreateDebugUtilsMessenger = nullptr;
@@ -79,16 +99,31 @@ void vkLoadDeviceProcs( VkDevice in_device )
 
 #else
 
+/*
+==============================================
+vkLoadVulkanInstanceProcs
+==============================================
+*/
 void vkLoadVulkanInstanceProcs( void )
 {
     // do nothing, static linked  
 }
 
+/*
+==============================================
+vkLoadVulkanProcs
+==============================================
+*/
 void vkLoadVulkanProcs( VkInstance in_instance )
 {
     // do nothing, static linked 
 }
 
+/*
+==============================================
+vkLoadDeviceProcs
+==============================================
+*/
 void vkLoadDeviceProcs( VkDevice in_device )
 {
     // do nothing, static linked 
@@ -96,10 +131,90 @@ void vkLoadDeviceProcs( VkDevice in_device )
 
 #endif
 
+/*
+==============================================
+vkLoadVulkanDebugUtilsProcs
+==============================================
+*/
 void vkLoadVulkanDebugUtilsProcs( VkInstance in_instance )
 {
 #if VK_EXT_debug_utils
     vkCreateDebugUtilsMessenger = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>( vkGetInstanceProcAddr( in_instance, "vkCreateDebugUtilsMessengerEXT" ) );
     vkDestroyDebugUtilsMessenger = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>( vkGetInstanceProcAddr( in_instance, "vkDestroyDebugUtilsMessengerEXT" ) );
 #endif //VK_EXT_debug_utils
+}
+
+/*
+==============================================
+crvkAllocation
+==============================================
+*/
+void *VKAPI_ATTR crvkAllocation( void * in_userData, size_t in_size, size_t in_alignment, VkSystemAllocationScope in_allocationScope )
+{
+    void* original = SDL_malloc( in_size + in_alignment - 1 + sizeof(void*) );
+    uintptr_t aligned = ( reinterpret_cast<uintptr_t>( original ) + sizeof(void*) + in_alignment - 1) & ~( in_alignment - 1 );
+    (reinterpret_cast<void**>(aligned))[-1] = original;
+    void* memptr = reinterpret_cast<void*>( aligned );
+
+    // check if memory is aligned 
+    SDL_assert( memptr && ( (uintptr_t)memptr % in_alignment ) == 0 );
+    return memptr;
+}
+
+/*
+==============================================
+crvkReallocation
+==============================================
+*/
+void* VKAPI_CALL crvkReallocation( void* in_userData, void* in_original, size_t in_size, size_t in_alignment, VkSystemAllocationScope in_allocationScope )
+{
+    void* original = static_cast<void**>( in_original )[-1];
+    if( original != nullptr )
+        original = SDL_realloc( original, in_size + in_alignment - 1 + sizeof(void*) );
+    else
+        original = SDL_malloc( in_size + in_alignment - 1 + sizeof(void*) );
+
+    uintptr_t aligned = ( reinterpret_cast<uintptr_t>( original ) + sizeof(void*) + in_alignment - 1) & ~( in_alignment - 1 );
+    (reinterpret_cast<void**>(aligned))[-1] = original;
+    void* memptr = reinterpret_cast<void*>( aligned );
+
+    // check if memory is aligned 
+    SDL_assert( memptr && ( (uintptr_t)memptr % in_alignment ) == 0 );
+    return memptr;
+}
+
+/*
+==============================================
+crvkFree
+==============================================
+*/
+void VKAPI_CALL crvkFree( void* in_userData, void* in_memory )
+{
+    if ( in_memory ) 
+    {
+        void* original = static_cast<void**>( in_memory )[-1];
+        SDL_free( original );
+    }
+}
+
+/*
+==============================================
+crvkInternalAllocation
+==============================================
+*/
+void VKAPI_CALL crvkInternalAllocation( void* in_userData, size_t in_size, VkInternalAllocationType in_allocationType, VkSystemAllocationScope in_allocationScope )
+{
+    //vkCtx.allocedMemory += size;
+    printf("[Vulkan] Internal allocation of %zu bytes, total %i\n", in_size, 0 );
+}
+
+/*
+==============================================
+crvkInternalFree
+==============================================
+*/
+void VKAPI_CALL crvkInternalFree( void* in_userData, size_t in_size, VkInternalAllocationType in_allocationType, VkSystemAllocationScope in_allocationScope )
+{
+    // vkCtx.allocedMemory -= size; 
+    printf("[Vulkan] Internal free of %zu bytes, total %i\n", in_size, 0 );
 }

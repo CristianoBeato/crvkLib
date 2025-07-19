@@ -30,6 +30,8 @@
 
 #define CR_VERBOSE 1
 
+extern const VkAllocationCallbacks  k_allocationCallbacks;
+
 // VK_EXT_debug_utils
 #if VK_EXT_debug_utils
 extern PFN_vkCreateDebugUtilsMessengerEXT       vkCreateDebugUtilsMessenger;
@@ -74,7 +76,8 @@ extern void vkLoadVulkanDebugUtilsProcs( VkInstance in_instance );
 
 #include "crvkPointer.hpp"
 #include "crvkException.hpp"
-#include "crvkDeviceProperties.hpp"
 #include "crvkContext.hpp"
+#include "crvkDevice.hpp"
+#include "crvkBuffer.hpp"
 
 #endif //__CRVK_IMPLEMENTATION_HPP__

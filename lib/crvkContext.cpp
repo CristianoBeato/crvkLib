@@ -20,17 +20,6 @@
 #include <cstring>
 #include <SDL3/SDL_assert.h>
 
-// our onw allocation structure using SDL_malloc
-const VkAllocationCallbacks crvkContext::k_allocationCallbacks = 
-{
-    nullptr,
-    crvkContext::Allocation,
-    crvkContext::Reallocation,
-    crvkContext::Free,
-    crvkContext::InternalAllocation,
-    crvkContext::InternalFree
-};
-
 /*
 ==============================================
 crvkContext::crvkContext
@@ -40,11 +29,7 @@ crvkContext::crvkContext( void ) :
     m_enableValidationLayers( false ),
     m_instance( nullptr ),
     m_debugMessenger( nullptr ),
-    m_surface( nullptr ),
-    m_device( nullptr ),
-    m_graphicsQueue( nullptr ),
-    m_presentQueue( nullptr ),
-    m_commandPool( nullptr )
+    m_surface( nullptr )
 {
 }
 
@@ -55,6 +40,7 @@ crvkContext::~crvkContext
 */
 crvkContext::~crvkContext( void )
 {
+    Destroy();
 }
 
 /*
@@ -136,7 +122,7 @@ bool crvkContext::Create(
         instanceCI.pNext = nullptr;
     }
 
-    result = vkCreateInstance( &instanceCI, AllocationCallbacks(), &m_instance );
+    result = vkCreateInstance( &instanceCI, &k_allocationCallbacks, &m_instance );
     if ( result != VK_SUCCESS ) 
     {
         AppendError( crvkGetVulkanError( result ) );
@@ -149,7 +135,7 @@ bool crvkContext::Create(
         vkCreateDebugUtilsMessenger = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr( m_instance, "vkCreateDebugUtilsMessengerEXT" );
         vkDestroyDebugUtilsMessenger = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr( m_instance, "vkDestroyDebugUtilsMessengerEXT" );
 
-        result = vkCreateDebugUtilsMessenger( m_instance, &debugCI, AllocationCallbacks(), &m_debugMessenger ); 
+        result = vkCreateDebugUtilsMessenger( m_instance, &debugCI, &k_allocationCallbacks, &m_debugMessenger ); 
         if ( result != VK_SUCCESS ) 
         {
             AppendError( SDL_GetError() );
@@ -159,7 +145,7 @@ bool crvkContext::Create(
  
     }
     
-    if ( !SDL_Vulkan_CreateSurface( const_cast<SDL_Window*>( in_whdn ), m_instance, AllocationCallbacks(), &m_surface ) )
+    if ( !SDL_Vulkan_CreateSurface( const_cast<SDL_Window*>( in_whdn ), m_instance, &k_allocationCallbacks, &m_surface ) )
     {            
         AppendError( SDL_GetError() );
         AppendError( "failed to create window surface!" );
@@ -180,52 +166,36 @@ bool crvkContext::Create(
     m_devicePropertiesList.Alloc( deviceCount );
     for ( uint32_t i = 0; i < deviceCount; i++)
     {
-        // aquire device properties 
-        m_devicePropertiesList[i].InitDevice( m_physicalDeviceList[i] );
+        // aquire device properties
+        m_devicePropertiesList[i] = static_cast<crvkDevice*>( SDL_malloc( sizeof( crvkDevice ) ) ); 
+        m_devicePropertiesList[i]->InitDevice( m_physicalDeviceList[i], m_surface );
     }
     
     return true;
 }
 
-bool crvkContext::InitializeDevice(const crvkDeviceProperties *in_device, const char *in_layers, const uint32_t in_layersCount, const char *in_deviceExtensions, const uint32_t in_deviceExtensionsCount)
-{
-    return false;
-}
-
 void crvkContext::Destroy(void)
 {
-    if ( m_commandPool != nullptr )
-    {
-        vkDestroyCommandPool( m_device, m_commandPool, AllocationCallbacks() );
-        m_commandPool = nullptr;
-    }
-    
-    if ( m_device != nullptr )
-    {
-        vkDestroyDevice( m_device, AllocationCallbacks() );
-        m_device = nullptr;
-    }
-    
     if( m_surface != nullptr )
     {
-        vkDestroySurfaceKHR( m_instance, m_surface, AllocationCallbacks() );
+        vkDestroySurfaceKHR( m_instance, m_surface, &k_allocationCallbacks );
         m_surface = nullptr;
     }
 
     if ( m_debugMessenger != nullptr )
     {
-        vkDestroyDebugUtilsMessenger( m_instance, m_debugMessenger, AllocationCallbacks() );
+        vkDestroyDebugUtilsMessenger( m_instance, m_debugMessenger, &k_allocationCallbacks );
         m_debugMessenger = nullptr;
     }
     
     if( m_instance != nullptr )
     {
-        vkDestroyInstance( m_instance, AllocationCallbacks() );
+        vkDestroyInstance( m_instance, &k_allocationCallbacks );
         m_instance = nullptr;
     }
 }
 
-void crvkContext::AppendError(const char *in_error)
+void crvkContext::AppendError(const char *in_error) const
 {
     //TODO: append a error to a queue 
     printf( in_error );
@@ -256,81 +226,6 @@ bool crvkContext::CheckValidationLayerSupport( const char ** in_layers, const ui
     }
 
     return true;
-}
-
-/*
-==============================================
-crvkContext::Allocation
-==============================================
-*/
-void *VKAPI_ATTR crvkContext::Allocation( void * in_userData, size_t in_size, size_t in_alignment, VkSystemAllocationScope in_allocationScope )
-{
-    void* original = SDL_malloc( in_size + in_alignment - 1 + sizeof(void*) );
-    uintptr_t aligned = ( reinterpret_cast<uintptr_t>( original ) + sizeof(void*) + in_alignment - 1) & ~( in_alignment - 1 );
-    (reinterpret_cast<void**>(aligned))[-1] = original;
-    void* memptr = reinterpret_cast<void*>( aligned );
-
-    // check if memory is aligned 
-    SDL_assert( memptr && ( (uintptr_t)memptr % in_alignment ) == 0 );
-    return memptr;
-}
-
-/*
-==============================================
-crvkContext::Reallocation
-==============================================
-*/
-void* VKAPI_CALL crvkContext::Reallocation( void* in_userData, void* in_original, size_t in_size, size_t in_alignment, VkSystemAllocationScope in_allocationScope )
-{
-    void* original = static_cast<void**>( in_original )[-1];
-    if( original != nullptr )
-        original = SDL_realloc( original, in_size + in_alignment - 1 + sizeof(void*) );
-    else
-        original = SDL_malloc( in_size + in_alignment - 1 + sizeof(void*) );
-
-    uintptr_t aligned = ( reinterpret_cast<uintptr_t>( original ) + sizeof(void*) + in_alignment - 1) & ~( in_alignment - 1 );
-    (reinterpret_cast<void**>(aligned))[-1] = original;
-    void* memptr = reinterpret_cast<void*>( aligned );
-
-    // check if memory is aligned 
-    SDL_assert( memptr && ( (uintptr_t)memptr % in_alignment ) == 0 );
-    return memptr;
-}
-
-/*
-==============================================
-crvkContext::Free
-==============================================
-*/
-void VKAPI_CALL crvkContext::Free( void* in_userData, void* in_memory )
-{
-    if ( in_memory ) 
-    {
-        void* original = static_cast<void**>( in_memory )[-1];
-        SDL_free( original );
-    }
-}
-
-/*
-==============================================
-crvkContext::InternalAllocation
-==============================================
-*/
-void VKAPI_CALL crvkContext::InternalAllocation( void* in_userData, size_t in_size, VkInternalAllocationType in_allocationType, VkSystemAllocationScope in_allocationScope )
-{
-    //vkCtx.allocedMemory += size;
-    printf("[Vulkan] Internal allocation of %zu bytes, total %i\n", in_size, 0 );
-}
-
-/*
-==============================================
-crvkContext::InternalFree
-==============================================
-*/
-void VKAPI_CALL crvkContext::InternalFree( void* in_userData, size_t in_size, VkInternalAllocationType in_allocationType, VkSystemAllocationScope in_allocationScope )
-{
-    // vkCtx.allocedMemory -= size; 
-    printf("[Vulkan] Internal free of %zu bytes, total %i\n", in_size, 0 );
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL crvkContext::DebugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT in_messageSeverity, VkDebugUtilsMessageTypeFlagsEXT in_messageType, const VkDebugUtilsMessengerCallbackDataEXT* in_callbackData, void* pUserData )
