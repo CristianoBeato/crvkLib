@@ -24,6 +24,8 @@ set( CRVK_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/crvkDevice.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/crvkContext.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/crvkContext.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/crvkSwapchain.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/crvkSwapchain.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/crvkBuffer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/crvkBuffer.hpp
     )
