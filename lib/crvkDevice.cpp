@@ -14,23 +14,39 @@
 // ===============================================================================================
 
 #include "crvkImplement.hpp"
-#include "crvkDeviceProperties.hpp"
+#include "crvkDevice.hpp"
 
 #include <cstring>
 #include <limits>
 #include <algorithm>
 #include <stdexcept>
 
-crvkDeviceProperties::crvkDeviceProperties( void ) : m_physicalDevice( nullptr )
+crvkDevice::crvkDevice( void ) : m_physicalDevice( nullptr )
 {
 }
 
-crvkDeviceProperties::~crvkDeviceProperties( void )
+crvkDevice::~crvkDevice( void )
 {
     
 }
 
-VkExtent2D crvkDeviceProperties::FindExtent( const uint32_t in_width, const uint32_t in_height )
+
+void crvkDevice::Destroy( void )
+{
+    if ( m_commandPool != nullptr )
+    {
+        vkDestroyCommandPool( m_logicalDevice, m_commandPool, &k_allocationCallbacks );
+        m_commandPool = nullptr;
+    }
+    
+    if ( m_logicalDevice != nullptr )
+    {
+        vkDestroyDevice( m_logicalDevice, &k_allocationCallbacks );
+        m_logicalDevice = nullptr;
+    }
+}
+
+VkExtent2D crvkDevice::FindExtent( const uint32_t in_width, const uint32_t in_height )
 {
 #if VK_VERSION_1_2
     auto capabilities = m_surfaceCapabilities.surfaceCapabilities;
@@ -53,7 +69,7 @@ VkExtent2D crvkDeviceProperties::FindExtent( const uint32_t in_width, const uint
     return actualExtent;
 }
 
-VkPresentModeKHR crvkDeviceProperties::FindPresentMode( const VkPresentModeKHR in_presentMode )
+VkPresentModeKHR crvkDevice::FindPresentMode( const VkPresentModeKHR in_presentMode )
 {
     for ( uint32_t i = 0; i < m_presentModes.Count(); i++)
     {
@@ -64,7 +80,7 @@ VkPresentModeKHR crvkDeviceProperties::FindPresentMode( const VkPresentModeKHR i
     return VK_PRESENT_MODE_FIFO_KHR;
 }
 
-VkSurfaceFormatKHR crvkDeviceProperties::FindSurfaceFormat( const VkFormat in_format, const VkColorSpaceKHR in_colorSpace )
+VkSurfaceFormatKHR crvkDevice::FindSurfaceFormat( const VkFormat in_format, const VkColorSpaceKHR in_colorSpace )
 { 
     for ( uint32_t i = 0; i < m_surfaceFormats.Count(); i++)
     {
@@ -84,7 +100,7 @@ VkSurfaceFormatKHR crvkDeviceProperties::FindSurfaceFormat( const VkFormat in_fo
 #endif 
 }
 
-uint32_t crvkDeviceProperties::FindMemoryType( const uint32_t typeFilter, const VkMemoryPropertyFlags properties )
+uint32_t crvkDevice::FindMemoryType( const uint32_t typeFilter, const VkMemoryPropertyFlags properties )
 {
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties( m_physicalDevice, &memProperties );
@@ -97,7 +113,7 @@ uint32_t crvkDeviceProperties::FindMemoryType( const uint32_t typeFilter, const 
     throw std::runtime_error("failed to find suitable memory type!");
 }
 
-const bool crvkDeviceProperties::CheckExtensionSupport(const char *in_extension)
+const bool crvkDevice::CheckExtensionSupport(const char *in_extension)
 {
     bool found = false;
     for ( uint32_t i = 0; i < m_availableExtensions.Count(); i++)
@@ -113,7 +129,7 @@ const bool crvkDeviceProperties::CheckExtensionSupport(const char *in_extension)
     return found;
 }
 
-bool crvkDeviceProperties::InitDevice( const VkPhysicalDevice in_device, const VkSurfaceKHR in_surface )
+bool crvkDevice::InitDevice( const VkPhysicalDevice in_device, const VkSurfaceKHR in_surface )
 {
     uint32_t queueFamilyCount = 0;
     uint32_t formatCount = 0;

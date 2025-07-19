@@ -26,6 +26,7 @@ public:
 
 private:
     SDL_Window*     m_window;
+    crvkContext*    m_context;
 
     void    InitSDL( void );
     void    InitVulkan( void );

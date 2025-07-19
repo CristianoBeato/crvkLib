@@ -20,6 +20,10 @@
 #include <stdexcept>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
+#include <SDL3/SDL_vulkan.h>
+
+const const char* validationLayers[1] = { "VK_LAYER_KHRONOS_validation" };
+const const char* deviceExtensions[1] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
 crvkTest::crvkTest( void ) : m_window( nullptr )
 {
@@ -44,6 +48,9 @@ void crvkTest::InitSDL(void)
     if( !SDL_Init( SDL_INIT_VIDEO | SDL_INIT_EVENTS ) )
         throw std::runtime_error( SDL_GetError() );
 
+    if ( !SDL_Vulkan_LoadLibrary( nullptr ) )
+        throw std::runtime_error( SDL_GetError() );
+
     // Create the window 
     m_window = SDL_CreateWindow( "crVkLib-Test", 800, 600, SDL_WINDOW_VULKAN );
     if ( !m_window )
@@ -52,6 +59,19 @@ void crvkTest::InitSDL(void)
 
 void crvkTest::InitVulkan(void)
 {
+
+    // create the context object 
+    m_context = new crvkContext();
+
+    // create our context instance 
+    m_context->Create( m_window, "crvkTest", "crvkLib", validationLayers, 1 );
+
+    // get the device list 
+
+
+    //
+    //m_context->InitializeDevice( , );
+
 }
 
 void crvkTest::FinishSDL(void)
@@ -62,6 +82,8 @@ void crvkTest::FinishSDL(void)
         SDL_DestroyWindow( m_window );
         m_window = nullptr;
     }
+
+    SDL_Vulkan_UnloadLibrary();
     
     // Free sdl lib 
     SDL_Quit();

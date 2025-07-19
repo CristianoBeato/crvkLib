@@ -13,21 +13,28 @@
 // For full license terms, see the LICENSE file in the root of this repository.
 // ===============================================================================================
 
-#ifndef __CRVK_DEVICE_PROPERTIES_HPP__
-#define __CRVK_DEVICE_PROPERTIES_HPP__
+#ifndef __CRVK_DEVICE_HPP__
+#define __CRVK_DEVICE_HPP__
 
 typedef struct
 {
     bool copyCommands2Enabled = false;
 } crvkDeviceSuportedFeatures_t;
 
-class crvkDeviceProperties
+class crvkDevice
 {
 public:
-    crvkDeviceProperties( void );
-    ~crvkDeviceProperties( void );
+    crvkDevice( void );
+    ~crvkDevice( void );
+
+    void    Create( const char* in_layers, const uint32_t in_layersCount, const char* in_deviceExtensions, const uint32_t in_deviceExtensionsCount );
+    void    Destroy( void );
 
     VkPhysicalDevice        PhysicalDevice( void ) const { return m_physicalDevice; }    
+    VkDevice                Device( void ) const { return m_logicalDevice; }
+    VkCommandPool           CommandPool( void ) const { return m_commandPool; }
+    VkQueue                 GraphicsQueue( void ) const { return m_graphicsQueue; }
+    VkQueue                 PresentQueue( void ) const { return m_presentQueue; }
     VkExtent2D              FindExtent( const uint32_t in_width, const uint32_t in_height ) const;
     VkPresentModeKHR        FindPresentMode( const VkPresentModeKHR in_presentMode ) const;
     VkSurfaceFormatKHR      FindSurfaceFormat( const VkFormat in_format, const VkColorSpaceKHR in_colorSpace ) const;
@@ -39,6 +46,7 @@ protected:
     bool    InitDevice( const VkPhysicalDevice in_device, const VkSurfaceKHR in_surface );
 
 private:
+    crvkDeviceSuportedFeatures_t            m_deviceSuportedFeatures;
 #ifdef VK_VERSION_1_2
     VkPhysicalDeviceProperties2             m_properties;
     VkSurfaceCapabilities2KHR               m_surfaceCapabilities;
@@ -50,15 +58,18 @@ private:
     VkPhysicalDeviceMemoryProperties        m_memoryProperties;
     crvkPointer<VkSurfaceFormatKHR>         m_surfaceFormats;
 #endif // VK_VERSION_1_2
+    VkQueue                                 m_graphicsQueue;
+    VkQueue                                 m_presentQueue;
+    VkCommandPool                           m_commandPool;
     VkPhysicalDevice                        m_physicalDevice;
-    crvkDeviceSuportedFeatures_t            m_deviceSuportedFeatures;
+    VkDevice                                m_logicalDevice;
     crvkPointer<VkExtensionProperties>      m_availableExtensions;
     crvkPointer<VkPresentModeKHR>           m_presentModes;
     crvkPointer<VkQueueFamilyProperties>    m_queueFamilies;
 
     // delete refernce 
-    crvkDeviceProperties( const crvkDeviceProperties & ) = delete;
-    crvkDeviceProperties operator=( const crvkDeviceProperties &) = delete;
+    crvkDevice( const crvkDevice & ) = delete;
+    crvkDevice operator=( const crvkDevice &) = delete;
 };
 
 #endif //!__CRVK_DEVICE_HPP__
