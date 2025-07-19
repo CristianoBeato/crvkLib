@@ -37,12 +37,6 @@ public:
 
     VkInstance                  Instance( void ) const { return m_instance; }
     VkSurfaceKHR                Surface( void ) const { return m_surface; }
-    const char*                 GetLastError( void ) ;
-
-protected:
-    friend class crvkBufferStatic;
-    friend class crvkBufferStaging;
-    void    AppendError( const char* in_error ) const;
 
 private:
     bool                                m_enableValidationLayers;

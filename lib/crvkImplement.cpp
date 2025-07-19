@@ -144,6 +144,16 @@ void vkLoadVulkanDebugUtilsProcs( VkInstance in_instance )
 #endif //VK_EXT_debug_utils
 }
 
+const char* crvkGetLastError( void )
+{
+    return nullptr;
+}
+
+void crvkAppendError( const char* in_error, const VkResult in_code )
+{
+    printf( "VkError: %s -> %s\n", in_error, crvkGetVulkanError( in_code ) );
+}
+
 /*
 ==============================================
 crvkAllocation

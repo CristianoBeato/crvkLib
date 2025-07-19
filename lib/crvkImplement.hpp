@@ -73,11 +73,14 @@ extern void vkLoadVulkanInstanceProcs( void );
 extern void vkLoadVulkanProcs( VkInstance in_instance );
 extern void vkLoadDeviceProcs( VkDevice in_device );
 extern void vkLoadVulkanDebugUtilsProcs( VkInstance in_instance );
+extern const char* crvkGetLastError( void );
+extern void crvkAppendError( const char* in_error, const VkResult in_code );
 
 #include "crvkPointer.hpp"
 #include "crvkException.hpp"
 #include "crvkContext.hpp"
 #include "crvkDevice.hpp"
+#include "crvkSwapchain.hpp"
 #include "crvkBuffer.hpp"
 
 #endif //__CRVK_IMPLEMENTATION_HPP__
