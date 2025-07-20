@@ -77,7 +77,7 @@ inline void crvkDynamicVector<_t>::Clear( void )
         m_data = nullptr;
     }
 
-    m_count = 0
+    m_count = 0;
 }
 
 template <typename _t>
@@ -89,6 +89,7 @@ inline void crvkDynamicVector<_t>::Resize( const uint32_t in_count )
 
     m_data = static_cast<pointer>( SDL_realloc( m_data, sizeof( _t ) * m_count ) );
     SDL_assert( m_data != nullptr );
+    m_count = in_count;
 }
 
 template <typename _t>
@@ -102,8 +103,8 @@ template<typename _t>
 inline uint32_t crvkDynamicVector<_t>::Append( const_reference in_ref )
 {
     uint32_t index = m_count++;
-    m_data = static_cast<pointer>( SDL_realloc( m_data ) );
-    std::memcpy( &m_data[i], &in_ref, sizeof( _t ) );
+    m_data = static_cast<pointer>( SDL_realloc( m_data, sizeof(_t) * m_count ) );
+    std::memcpy( &m_data[index], &in_ref, sizeof( _t ) );
     return index;
 }
 
