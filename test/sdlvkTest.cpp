@@ -22,8 +22,49 @@
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL_vulkan.h>
 
-const const char* validationLayers[1] = { "VK_LAYER_KHRONOS_validation" };
-const const char* deviceExtensions[1] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+static const char* validationLayers[1] = { "VK_LAYER_KHRONOS_validation" };
+static const char* deviceExtensions[1] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+
+#if 0
+static const uint32_t k_FRAME_COUNT = 2; // double buffered
+#else
+static const uint32_t k_FRAME_COUNT = 3; // triple buffered
+#endif
+
+typedef struct vec2
+{
+    float x = 0.0f;
+    float y = 0.0f;
+};
+
+typedef struct vec3
+{
+    float x = 0.0f;
+    float y = 0.0f;
+    float z = 0.0f;
+};
+
+struct crVertex 
+{
+    vec3 pos;
+    vec2 uv;
+    vec3 color;
+};
+
+const uint16_t indices[6] = 
+{
+    0, 1, 2,
+    2, 1, 3
+};
+
+const crVertex vertices[4] = 
+{
+    // vertex positions         uv coordinate   // vertex color 
+    { {  0.5f, -0.5f, 0.0f }, { 1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f } }, // RT
+    { {  0.5f,  0.5f, 0.0f }, { 1.0f, 1.0f }, { 0.0f, 1.0f, 0.0f } }, // RB
+    { { -0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } }, // LT
+    { { -0.5f,  0.5f, 0.0f }, { 0.0f, 1.0f }, { 1.0f, 0.0f, 1.0f } }, // LB
+};
 
 crvkTest::crvkTest( void ) : m_window( nullptr )
 {
@@ -59,6 +100,7 @@ void crvkTest::InitSDL(void)
 
 void crvkTest::InitVulkan(void)
 {
+    int width = 0, height = 0;
 
     // create the context object 
     m_context = new crvkContext();
@@ -67,11 +109,41 @@ void crvkTest::InitVulkan(void)
     m_context->Create( m_window, "crvkTest", "crvkLib", validationLayers, 1 );
 
     // get the device list 
-
-
+    
     //
     //m_context->InitializeDevice( , );
+    
+    // aquire window surface size 
+    SDL_GetWindowSizeInPixels( m_window, &width, &height );
 
+    auto surfaceCapabilities = m_device->SurfaceCapabilities();
+
+    // create the swapchain 
+    m_swapchain = new crvkSwapchain();
+    m_swapchain->Create( 
+        m_context,      // the context for error handling 
+        m_device,       // aquire the device 
+        k_FRAME_COUNT,
+        // try find if device suport the requested swapchain properties 
+        m_device->FindExtent( width, height ),
+        m_device->FindSurfaceFormat( VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR ),
+        m_device->FindPresentMode( VK_PRESENT_MODE_MAILBOX_KHR ),
+        surfaceCapabilities.currentTransform
+    );
+
+    // Create the element buffer 
+    m_elementBuffer = new crvkBufferStaging();
+    m_elementBuffer->Create( m_device, sizeof( uint16_t ) * 6, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, CRVK_BUFFER_DYNAMIC_STORAGE_BIT );
+
+    // Copy the index to buffer 
+    m_elementBuffer->SubData( indices, 0, sizeof( indices ) * 6 );
+
+    // Create the vertex buffer
+    m_vertexBuffer = new crvkBufferStaging();
+    m_vertexBuffer->Create( m_device, sizeof( crVertex ) * 4, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, CRVK_BUFFER_DYNAMIC_STORAGE_BIT );
+
+    // copy vertex to buffer
+    m_vertexBuffer->SubData( m_device, 0, sizeof( crVertex ) * 4 );
 }
 
 void crvkTest::FinishSDL(void)
@@ -91,6 +163,32 @@ void crvkTest::FinishSDL(void)
 
 void crvkTest::FinishVulkan(void)
 {
+    if( m_vertexBuffer != nullptr )
+    {   
+        delete m_vertexBuffer;
+        m_vertexBuffer = nullptr;
+    }
+
+    if ( m_elementBuffer != nullptr )
+    {
+        delete m_elementBuffer;
+        m_elementBuffer = nullptr;
+    }
+    
+    if( m_swapchain != nullptr )
+    {
+        delete m_swapchain;
+        m_swapchain = nullptr;
+    }
+
+    m_device->Destroy();
+    m_device = nullptr;
+
+    if ( m_context != nullptr )
+    {
+        delete m_context;
+        m_context = nullptr;
+    }
 }
 
 void crvkTest::RunLoop(void)

@@ -27,6 +27,10 @@ public:
 private:
     SDL_Window*     m_window;
     crvkContext*    m_context;
+    crvkDevice*     m_device;
+    crvkSwapchain*  m_swapchain;
+    crvkBuffer*     m_vertexBuffer;
+    crvkBuffer*     m_elementBuffer;
 
     void    InitSDL( void );
     void    InitVulkan( void );
