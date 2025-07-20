@@ -25,19 +25,13 @@ class crvkBuffer
 public:
     crvkBuffer( void ) {}
 
-    /// @brief 
-    /// @param in_contex 
-    /// @param in_deviceProps 
-    /// @param in_size 
-    /// @param in_usage 
+    /// @brief Create the buffer object and allocate memory 
+    /// @param in_device the orgin buffer 
+    /// @param in_size buffer size ( this is double on crvkBufferStaging )
+    /// @param in_usage buffer usage 
     /// @param in_flags 
     /// @return 
-    virtual bool        Create( 
-        const crvkContext* in_contex, 
-        const crvkDevice* in_device, 
-        const size_t in_size, 
-        const VkBufferUsageFlags in_usage, 
-        const uint32_t in_flags ) = 0;
+    virtual bool        Create( const crvkDevice* in_device, const size_t in_size, const VkBufferUsageFlags in_usage, const uint32_t in_flags ) = 0;
 
     /// @brief 
     /// @param  
@@ -76,6 +70,15 @@ public:
     /// @return 
     virtual VkBuffer    Handle( void ) const = 0;
 
+    /// @brief  
+    /// @return /
+    virtual VkFence     Fence( void ) const = 0;
+
+    /// @brief 
+    /// @param  
+    /// @return 
+    virtual VkSemaphore Semaphore( void ) const = 0;
+
 private:
     crvkBuffer( const crvkBuffer & ) = delete;
     crvkBuffer operator=( const crvkBuffer & ) = delete;
@@ -87,18 +90,21 @@ class crvkBufferStatic : public crvkBuffer
 public:
     crvkBufferStatic( void );
     ~crvkBufferStatic( void );
-
-    virtual bool Create( const crvkContext* in_contex, const crvkDevice* in_deviceProps, const size_t in_size, const VkBufferUsageFlags in_usage, const uint32_t in_flags );
-    virtual void        Destroy( void );
-    virtual void        SubData( const void* in_data, const uintptr_t in_offset, const size_t in_size );
-    virtual void        GetSubData( void* in_data, const uintptr_t in_offset, const size_t in_size );
-    virtual void*       Map( const uintptr_t in_offset, const size_t in_size, const uint32_t in_flags );
-    virtual void        Unmap( void );
-    virtual void        Flush( const uintptr_t in_offset, const size_t in_size );
-    virtual VkBuffer    Handle( void ) const;
+    virtual bool Create( const crvkDevice* in_deviceProps, const size_t in_size, const VkBufferUsageFlags in_usage, const uint32_t in_flags );
+    virtual void Destroy( void );
+    virtual void SubData( const void* in_data, const uintptr_t in_offset, const size_t in_size );
+    virtual void GetSubData( void* in_data, const uintptr_t in_offset, const size_t in_size );
+    virtual void* Map( const uintptr_t in_offset, const size_t in_size, const uint32_t in_flags );
+    virtual void Unmap( void );
+    virtual void Flush( const uintptr_t in_offset, const size_t in_size );
+    virtual VkBuffer Handle( void ) const;
+    virtual VkFence Fence( void ) const;
+    virtual VkSemaphore Semaphore( void ) const;
 
 private:
     crvkDevice*     m_device;
+    VkFence         m_fence;
+    VkSemaphore     m_semaphore;
     VkBuffer        m_buffer;
     VkDeviceMemory  m_memory;
 };
@@ -107,13 +113,12 @@ private:
 /// @brief crvkBufferStaging works like OpenGL buffers, create a two stage buffer,    
 /// a GPU memory bufer and a CPU side buffer and perform the buffer and sincronization
 ///
-class crvkBufferStaging
+class crvkBufferStaging : public crvkBuffer
 {
 public:
     crvkBufferStaging( void );
     ~crvkBufferStaging( void );
-
-    virtual bool Create( const crvkContext* in_contex, const crvkDevice* in_deviceProps, const size_t in_size, const VkBufferUsageFlags in_usage, const uint32_t in_flags );
+    virtual bool Create( const crvkDevice* in_deviceProps, const size_t in_size, const VkBufferUsageFlags in_usage, const uint32_t in_flags );
     virtual void Destroy( void );
     virtual void SubData( const void* in_data, const uintptr_t in_offset, const size_t in_size );
     virtual void GetSubData( void* in_data, const uintptr_t in_offset, const size_t in_size );
@@ -121,14 +126,19 @@ public:
     virtual void Unmap( void );
     virtual void Flush( const uintptr_t in_offset, const size_t in_size );
     virtual VkBuffer Handle( void ) const;
+    virtual VkFence Fence( void ) const;
+    virtual VkSemaphore Semaphore( void ) const;
 
 private:
+    bool                m_semaphoreInUse;
     uint32_t            m_flags;
     crvkDevice*         m_device;
     VkBuffer            m_gpuBuffer;
     VkBuffer            m_cpuBuffer;
     VkDeviceMemory      m_gpuBufferMemory;
     VkDeviceMemory      m_cpuBufferMemory;
+    VkFence             m_fence;
+    VkSemaphore         m_semaphore;
     VkCommandBuffer     m_commandBuffer;
 };
 
