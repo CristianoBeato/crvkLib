@@ -16,7 +16,8 @@
 #ifndef __CRVK_PRECOMPILED_HPP__
 #define __CRVK_PRECOMPILED_HPP__
 
-#include <cstdint> // int32_t, uint32_, int16_t, uint16_t
+#include <iostream> // std::cerr 
+#include <cstdint> // int32_t, uint32_, int16_t, uint16_t, UINT32_MAX 
 #include <cstring> // std::memcpy, std::strcmp
 #include <stdexcept> // std::runtime_error
 #include <exception> // std::exeption

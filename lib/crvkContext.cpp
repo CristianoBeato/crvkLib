@@ -53,7 +53,7 @@ bool crvkContext::Create(
 {
     VkResult result = VK_SUCCESS;
     uint32_t SDL3ExtensionCount = 0;
-    crvkPointer<const char*> enabledExtensions = crvkPointer<const char*>();
+    crvkDynamicVector<const char*> enabledExtensions;
     const char* const* SDL3Extensions = nullptr;
 
     // enable layers
@@ -81,24 +81,21 @@ bool crvkContext::Create(
     VkInstanceCreateInfo instanceCI{};
     instanceCI.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     instanceCI.pApplicationInfo = &appInfo;
-
+    
+    // copy and enable system extensios
     SDL3Extensions = SDL_Vulkan_GetInstanceExtensions( &SDL3ExtensionCount );
+    enabledExtensions.Resize( SDL3ExtensionCount );
+    enabledExtensions.Memcpy( const_cast<const char**>( SDL3Extensions ), 0, SDL3ExtensionCount );
+
+#if VK_VERSION_1_2
+    enabledExtensions.Append( VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME ); //
+#endif 
 
     if ( m_enableValidationLayers )
     {
         // enable debug utils extension 
-        enabledExtensions.Alloc( SDL3ExtensionCount + 1 );
-        enabledExtensions.Memcpy( const_cast<const char**>( SDL3Extensions ), 0, SDL3ExtensionCount );
         enabledExtensions[SDL3ExtensionCount] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
     }
-    else
-    {
-        enabledExtensions.Alloc( SDL3ExtensionCount );
-        enabledExtensions.Memcpy( const_cast<const char**>( SDL3Extensions ), 0, SDL3ExtensionCount );
-    }
-
-    
-    VK_KHR_get_surface_capabilities2
 
     instanceCI.enabledExtensionCount = enabledExtensions.Count();
     instanceCI.ppEnabledExtensionNames = &enabledExtensions;

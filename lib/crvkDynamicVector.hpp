@@ -34,6 +34,7 @@ public:
 
     void    Clear( void );
     void    Resize( const uint32_t count );
+    void    Memcpy( const_pointer in_source, const uint32_t in_offset, const uint32_t in_count );
 
     // insert a elemnt at end of teh vector
     uint32_t Append( const_reference ref );
@@ -89,6 +90,13 @@ inline void crvkDynamicVector<_t>::Resize( const uint32_t in_count )
     m_data = static_cast<pointer>( SDL_realloc( m_data, sizeof( _t ) * m_count ) );
     SDL_assert( m_data != nullptr );
 }
+
+template <typename _t>
+inline void crvkDynamicVector<_t>::Memcpy(const_pointer in_source, const uint32_t in_offset, const uint32_t in_count)
+{
+    std::memcpy( &m_data[in_offset], in_source, sizeof( _t ) * in_count );
+}
+
 
 template<typename _t>
 inline uint32_t crvkDynamicVector<_t>::Append( const_reference in_ref )
