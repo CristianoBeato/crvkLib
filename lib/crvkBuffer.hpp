@@ -16,8 +16,14 @@
 #ifndef __CRVK_BUFFER_HPP__
 #define __CRVK_BUFFER_HPP__
 
-static const unsigned int CRVK_ACCESS_BUFFER_WRITE = 1 << 1; 
-static const unsigned int CRVK_ACCESS_BUFFER_READ = 1 << 2; 
+// buffer creation flags
+static const uint32_t CRVK_BUFFER_DYNAMIC_STORAGE_BIT   = 1 << 1; // Enable all internal buffer assistence  
+static const uint32_t CRVK_BUFFER_UNSYNCHRONIZED_BIT    = 2 << 1; // Disabel buffer internal sinchronization 
+static const uint32_t CRVK_BUFFER_CLIENT_STORAGE_BIT    = 3 << 1; // 
+
+// map buffer flags
+static const uint32_t CRVK_BUFFER_MAP_ACCESS_WRITE = 1 << 2; 
+static const uint32_t CRVK_BUFFER_MAP_ACCESS_READ = 2 << 2;
 
 /// @brief our buffer base structure 
 class crvkBuffer 

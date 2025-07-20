@@ -660,9 +660,9 @@ void crvkBufferStaging::Flush( const uintptr_t in_offset, const size_t in_size )
     copyRegion.size = in_size;
 
     // perform a copy from buffer 
-    if ( m_flags & CRVK_ACCESS_BUFFER_WRITE ) // copy content from 
+    if ( m_flags & CRVK_BUFFER_MAP_ACCESS_WRITE ) // copy content from 
         vkCmdCopyBuffer( m_commandBuffer, m_cpuBuffer, m_gpuBuffer, 1, &copyRegion );
-    else if ( m_flags & CRVK_ACCESS_BUFFER_READ )
+    else if ( m_flags & CRVK_BUFFER_MAP_ACCESS_READ )
         vkCmdCopyBuffer( m_commandBuffer, m_gpuBuffer, m_cpuBuffer, 1, &copyRegion );
 
     vkEndCommandBuffer( m_commandBuffer );
@@ -696,7 +696,7 @@ void crvkBufferStaging::Flush( const uintptr_t in_offset, const size_t in_size )
     // submit commands
     queue->Submit( waitInfo, 2, &commandBufferSubmitInfo, 1, &signalInfo, 1, m_fence );
         
-    if ( m_flags & CRVK_ACCESS_BUFFER_READ )
+    if ( m_flags & CRVK_BUFFER_MAP_ACCESS_READ )
     {
         // wait for copy end
         vkWaitForFences( m_device->Device(), 1, &m_fence, VK_TRUE, UINT64_MAX );
