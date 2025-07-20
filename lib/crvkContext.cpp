@@ -73,9 +73,9 @@ bool crvkContext::Create(
     VkApplicationInfo appInfo{};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     appInfo.pApplicationName = in_applicationName;
-    appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+    appInfo.applicationVersion = VK_MAKE_VERSION( 0, 0, 1 );
     appInfo.pEngineName = in_engineName;
-    appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+    appInfo.engineVersion = VK_MAKE_VERSION( 0, 0, 1 );
     appInfo.apiVersion = VK_API_VERSION_1_3;
 
     VkInstanceCreateInfo instanceCI{};
@@ -91,11 +91,14 @@ bool crvkContext::Create(
     enabledExtensions.Append( VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME ); //
 #endif 
 
-    if ( m_enableValidationLayers )
+    if ( m_enableValidationLayers ) // enable debug utils extension 
+        enabledExtensions.Append( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
+
+    for ( uint32_t i = 0; i < enabledExtensions.Count(); i++)
     {
-        // enable debug utils extension 
-        enabledExtensions[SDL3ExtensionCount] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
+        printf( enabledExtensions[i] );
     }
+    
 
     instanceCI.enabledExtensionCount = enabledExtensions.Count();
     instanceCI.ppEnabledExtensionNames = &enabledExtensions;
@@ -167,6 +170,11 @@ bool crvkContext::Create(
     return true;
 }
 
+/*
+==============================================
+crvkContext::Destroy
+==============================================
+*/
 void crvkContext::Destroy(void)
 {
     for ( uint32_t i = 0; i < m_devicePropertiesList.Count(); i++)
@@ -196,6 +204,11 @@ void crvkContext::Destroy(void)
     }
 }
 
+/*
+==============================================
+crvkContext::GetDeviceList
+==============================================
+*/
 crvkDevice* const * crvkContext::GetDeviceList( uint32_t* in_count ) const
 {
     if ( in_count != nullptr )
@@ -204,6 +217,11 @@ crvkDevice* const * crvkContext::GetDeviceList( uint32_t* in_count ) const
     return &m_devicePropertiesList;
 }
 
+/*
+==============================================
+crvkContext::CheckValidationLayerSupport
+==============================================
+*/
 bool crvkContext::CheckValidationLayerSupport( const char ** in_layers, const uint32_t in_layersCount )
 {
     uint32_t layerCount = 0;
@@ -232,6 +250,11 @@ bool crvkContext::CheckValidationLayerSupport( const char ** in_layers, const ui
     return true;
 }
 
+/*
+==============================================
+crvkContext::DebugCallback
+==============================================
+*/
 VKAPI_ATTR VkBool32 VKAPI_CALL crvkContext::DebugCallback( VkDebugUtilsMessageSeverityFlagBitsEXT in_messageSeverity, VkDebugUtilsMessageTypeFlagsEXT in_messageType, const VkDebugUtilsMessengerCallbackDataEXT* in_callbackData, void* pUserData )
 {
     //    if (messageSeverity < VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
