@@ -13,9 +13,9 @@
 // For full license terms, see the LICENSE file in the root of this repository.
 // ===============================================================================================
 
-#include "crvkImplement.hpp"
+#include "crvkPrecompiled.hpp"
+#include "crvkCore.hpp"
 
-#include <cstdio>
 
  /// 
 static VKAPI_ATTR void* VKAPI_CALL crvkAllocation( void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope );
@@ -151,7 +151,7 @@ const char* crvkGetLastError( void )
 
 void crvkAppendError( const char* in_error, const VkResult in_code )
 {
-    printf( "VkError: %s -> %s\n", in_error, crvkGetVulkanError( in_code ) );
+    std::printf( "VkError: %s -> %s\n", in_error, crvkGetVulkanError( in_code ) );
 }
 
 /*
@@ -215,7 +215,7 @@ crvkInternalAllocation
 void VKAPI_CALL crvkInternalAllocation( void* in_userData, size_t in_size, VkInternalAllocationType in_allocationType, VkSystemAllocationScope in_allocationScope )
 {
     //vkCtx.allocedMemory += size;
-    printf("[Vulkan] Internal allocation of %zu bytes, total %i\n", in_size, 0 );
+    std::printf("[Vulkan] Internal allocation of %zu bytes, total %i\n", in_size, 0 );
 }
 
 /*
@@ -226,5 +226,5 @@ crvkInternalFree
 void VKAPI_CALL crvkInternalFree( void* in_userData, size_t in_size, VkInternalAllocationType in_allocationType, VkSystemAllocationScope in_allocationScope )
 {
     // vkCtx.allocedMemory -= size; 
-    printf("[Vulkan] Internal free of %zu bytes, total %i\n", in_size, 0 );
+    std::printf("[Vulkan] Internal free of %zu bytes, total %i\n", in_size, 0 );
 }

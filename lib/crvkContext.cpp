@@ -13,12 +13,8 @@
 // For full license terms, see the LICENSE file in the root of this repository.
 // ===============================================================================================
 
-#include "crvkImplement.hpp"
+#include "crvkPrecompiled.hpp"
 #include "crvkContext.hpp"
-
-#include <iostream>
-#include <cstring>
-#include <SDL3/SDL_assert.h>
 
 /*
 ==============================================
@@ -70,7 +66,7 @@ bool crvkContext::Create(
 
     if ( m_enableValidationLayers && !CheckValidationLayerSupport( in_layers, in_layersCount ) ) 
     {
-        AppendError( "crvkContext::Create: validation layers requested, but not available!" );
+        crvkAppendError( "crvkContext::Create: validation layers requested, but not available!", VK_INCOMPLETE  );
         return false; 
     }
 
@@ -101,6 +97,9 @@ bool crvkContext::Create(
         enabledExtensions.Memcpy( const_cast<const char**>( SDL3Extensions ), 0, SDL3ExtensionCount );
     }
 
+    
+    VK_KHR_get_surface_capabilities2
+
     instanceCI.enabledExtensionCount = enabledExtensions.Count();
     instanceCI.ppEnabledExtensionNames = &enabledExtensions;
 
@@ -125,8 +124,7 @@ bool crvkContext::Create(
     result = vkCreateInstance( &instanceCI, &k_allocationCallbacks, &m_instance );
     if ( result != VK_SUCCESS ) 
     {
-        AppendError( crvkGetVulkanError( result ) );
-        AppendError("failed to create instance!");
+        crvkAppendError("failed to create instance!", result );
         return false;
     }
 
@@ -138,8 +136,7 @@ bool crvkContext::Create(
         result = vkCreateDebugUtilsMessenger( m_instance, &debugCI, &k_allocationCallbacks, &m_debugMessenger ); 
         if ( result != VK_SUCCESS ) 
         {
-            AppendError( SDL_GetError() );
-            AppendError( "failed to set up debug messenger!" );
+            crvkAppendError( "failed to set up debug messenger!", result );
             return false;
         }
  
@@ -147,16 +144,15 @@ bool crvkContext::Create(
     
     if ( !SDL_Vulkan_CreateSurface( const_cast<SDL_Window*>( in_whdn ), m_instance, &k_allocationCallbacks, &m_surface ) )
     {            
-        AppendError( SDL_GetError() );
-        AppendError( "failed to create window surface!" );
+        crvkAppendError( SDL_GetError(), VK_INCOMPLETE );
         return false;
     }
 
     uint32_t deviceCount = 0;
-    vkEnumeratePhysicalDevices( m_instance, &deviceCount, nullptr);
+    result = vkEnumeratePhysicalDevices( m_instance, &deviceCount, nullptr);
     if (deviceCount == 0) 
     {
-        AppendError( "failed to find GPUs with Vulkan support!" );
+        crvkAppendError( "failed to find GPUs with Vulkan support!", result );
         return false;
     }
 
@@ -168,7 +164,7 @@ bool crvkContext::Create(
     {
         // aquire device properties
         m_devicePropertiesList[i] = static_cast<crvkDevice*>( SDL_malloc( sizeof( crvkDevice ) ) ); 
-        m_devicePropertiesList[i]->InitDevice( m_physicalDeviceList[i], m_surface );
+        m_devicePropertiesList[i]->InitDevice( this, m_physicalDeviceList[i] );
     }
     
     return true;
@@ -176,6 +172,14 @@ bool crvkContext::Create(
 
 void crvkContext::Destroy(void)
 {
+    for ( uint32_t i = 0; i < m_devicePropertiesList.Count(); i++)
+    {
+        delete m_devicePropertiesList[i];
+    }
+    
+    m_physicalDeviceList.Free();
+    m_devicePropertiesList.Free();
+
     if( m_surface != nullptr )
     {
         vkDestroySurfaceKHR( m_instance, m_surface, &k_allocationCallbacks );
@@ -195,17 +199,19 @@ void crvkContext::Destroy(void)
     }
 }
 
-void crvkContext::AppendError(const char *in_error) const
+crvkDevice* const * crvkContext::GetDeviceList( uint32_t* in_count ) const
 {
-    //TODO: append a error to a queue 
-    printf( in_error );
+    if ( in_count != nullptr )
+        *in_count = m_devicePropertiesList.Count();
+    
+    return &m_devicePropertiesList;
 }
 
 bool crvkContext::CheckValidationLayerSupport( const char ** in_layers, const uint32_t in_layersCount )
 {
     uint32_t layerCount = 0;
     vkEnumerateInstanceLayerProperties( &layerCount, nullptr );
-    crvkPointer<VkLayerProperties> availableLayers;
+    crvkPointer<VkLayerProperties> availableLayers = crvkPointer<VkLayerProperties>( layerCount );
     vkEnumerateInstanceLayerProperties( &layerCount, &availableLayers );
 
     for ( uint32_t i = 0; i < in_layersCount; i++)
@@ -214,7 +220,8 @@ bool crvkContext::CheckValidationLayerSupport( const char ** in_layers, const ui
 
         for (size_t j = 0; j < layerCount; j++)
         {
-            if ( std::strcmp( in_layers[i], availableLayers[j].layerName ) == 0) 
+            auto layer = availableLayers[j];
+            if ( std::strcmp( in_layers[i], layer.layerName ) == 0) 
             {
                 layerFound = true;
                 break;

@@ -22,6 +22,8 @@
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL_vulkan.h>
 
+#include "crvkCore.hpp"
+
 static const char* validationLayers[1] = { "VK_LAYER_KHRONOS_validation" };
 static const char* deviceExtensions[1] = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 
@@ -35,21 +37,21 @@ typedef struct vec2
 {
     float x = 0.0f;
     float y = 0.0f;
-};
+} vec2;
 
 typedef struct vec3
 {
     float x = 0.0f;
     float y = 0.0f;
     float z = 0.0f;
-};
+} vec3;
 
-struct crVertex 
+typedef struct crVertex 
 {
     vec3 pos;
     vec2 uv;
     vec3 color;
-};
+} crVertex;
 
 const uint16_t indices[6] = 
 {
@@ -100,7 +102,9 @@ void crvkTest::InitSDL(void)
 
 void crvkTest::InitVulkan(void)
 {
+    uint32_t deviceCount = 0;
     int width = 0, height = 0;
+    crvkDevice* const* devices = nullptr;
 
     // create the context object 
     m_context = new crvkContext();
@@ -109,9 +113,12 @@ void crvkTest::InitVulkan(void)
     m_context->Create( m_window, "crvkTest", "crvkLib", validationLayers, 1 );
 
     // get the device list 
+    devices = m_context->GetDeviceList( &deviceCount );
     
-    //
-    //m_context->InitializeDevice( , );
+    
+    // TODO: find the best device 
+    // just pic the first 
+    m_device = devices[0];
     
     // aquire window surface size 
     SDL_GetWindowSizeInPixels( m_window, &width, &height );

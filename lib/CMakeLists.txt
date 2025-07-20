@@ -15,9 +15,10 @@
 #
 ################################################################################
 
-set( CRVK_SOURCES 
-    ${CMAKE_CURRENT_SOURCE_DIR}/crvkImplement.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/crvkImplement.hpp
+set( CRVK_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/crvkPrecompiled.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/crvkCore.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/crvkCore.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/crvkException.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/crvkException.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/crvkDevice.cpp
@@ -32,4 +33,4 @@ set( CRVK_SOURCES
 
 add_library( crvkLib STATIC ${CRVK_SOURCES} )
 target_include_directories( crvkLib  PRIVATE ${CMAKE_SOURCE_DIR} )
-target_precompile_headers( crvkLib PUBLIC "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/crvkImplement.hpp>" )
+target_precompile_headers( crvkLib PUBLIC "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/crvkPrecompiled.hpp>" )

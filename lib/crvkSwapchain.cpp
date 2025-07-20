@@ -13,7 +13,7 @@
 // For full license terms, see the LICENSE file in the root of this repository.
 // ===============================================================================================
 
-#include "crvkImplement.hpp"
+#include "crvkPrecompiled.hpp"
 #include "crvkSwapchain.hpp"
 
 /*
@@ -21,7 +21,14 @@
 crvkSwapchain::crvkSwapchain
 ==============================================
 */
-crvkSwapchain::crvkSwapchain( void )
+crvkSwapchain::crvkSwapchain( void ) : 
+    m_currentFrame( 0 ),
+    m_imageIndex( 0 ),
+    m_imageCount( 0 ),
+    m_frameCount( 0 ),
+    m_swapChain( nullptr ),
+    m_renderPass( nullptr ),
+    m_device( nullptr )
 {
 }
 

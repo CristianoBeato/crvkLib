@@ -13,13 +13,8 @@
 // For full license terms, see the LICENSE file in the root of this repository.
 // ===============================================================================================
 
-#include "crvkImplement.hpp"
+#include "crvkPrecompiled.hpp"
 #include "crvkDevice.hpp"
-
-#include <cstring>
-#include <limits>
-#include <algorithm>
-#include <stdexcept>
 
 crvkDeviceQueue::~crvkDeviceQueue( void )
 {
@@ -88,19 +83,25 @@ crvkDevice::crvkDevice( void ) : m_physicalDevice( nullptr )
 
 crvkDevice::~crvkDevice( void )
 {   
+    Destroy();
+    m_physicalDevice = nullptr;
+    m_context = nullptr;
 }
 
 bool crvkDevice::Create(const char **in_layers, const uint32_t in_layersCount, const char **in_deviceExtensions, const uint32_t in_deviceExtensionsCount)
 {
     VkResult result = VK_SUCCESS;
+    crvkPointer<VkDeviceQueueCreateInfo> queueCreateInfos;
 
     VkPhysicalDeviceFeatures deviceFeatures{};
 
     VkDeviceCreateInfo deviceCI{};
     deviceCI.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 
-    deviceCI.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-    deviceCI.pQueueCreateInfos = queueCreateInfos.data();
+    FindQueues( queueCreateInfos );
+
+    deviceCI.queueCreateInfoCount = queueCreateInfos.Count();
+    deviceCI.pQueueCreateInfos = &queueCreateInfos;
 
     deviceCI.pEnabledFeatures = &deviceFeatures;
 
@@ -130,7 +131,7 @@ bool crvkDevice::Create(const char **in_layers, const uint32_t in_layersCount, c
     poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     poolInfo.queueFamilyIndex = m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_GRAPHICS]->Family();
 
-    auto result = vkCreateCommandPool( m_logicalDevice, &poolInfo, &k_allocationCallbacks, &m_commandPool ); 
+    result = vkCreateCommandPool( m_logicalDevice, &poolInfo, &k_allocationCallbacks, &m_commandPool ); 
     if ( result != VK_SUCCESS) 
     {
         //throw std::runtime_error("failed to create command pool!");
@@ -152,6 +153,15 @@ bool crvkDevice::Create(const char **in_layers, const uint32_t in_layersCount, c
 
 void crvkDevice::Destroy(void)
 {
+    for ( uint32_t i = 0; i < 4; i++)
+    {
+        if ( m_queues[i] == nullptr )
+            continue;
+
+        delete m_queues[i];
+        m_queues[i] = nullptr;
+    }
+    
     if ( m_commandPool != nullptr )
     {
         vkDestroyCommandPool( m_logicalDevice, m_commandPool, &k_allocationCallbacks );
@@ -163,6 +173,8 @@ void crvkDevice::Destroy(void)
         vkDestroyDevice( m_logicalDevice, &k_allocationCallbacks );
         m_logicalDevice = nullptr;
     }
+
+    m_context = nullptr;
 }
 
 VkExtent2D crvkDevice::FindExtent( const uint32_t in_width, const uint32_t in_height ) const
@@ -244,6 +256,21 @@ crvkDeviceQueue* crvkDevice::GetQueue( const crvkDeviceQueue::crvkQueueType in_t
     return m_queues[i];
 }
 
+bool crvkDevice::HasPresentQueue(void) const
+{
+    return m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_PRESENT];
+}
+
+bool crvkDevice::HasComputeQueue(void) const
+{
+    return m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_COMPUTE];
+}
+
+bool crvkDevice::HasTransferQueue(void) const
+{
+    return m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_TRANSFER];
+}
+
 VkSurfaceCapabilitiesKHR crvkDevice::SurfaceCapabilities(void) const
 {
 #if VK_VERSION_1_2
@@ -269,28 +296,37 @@ const bool crvkDevice::CheckExtensionSupport(const char *in_extension)
     return found;
 }
 
-bool crvkDevice::InitDevice( const VkPhysicalDevice in_device, const VkSurfaceKHR in_surface )
+bool crvkDevice::InitDevice( const crvkContext* in_context, const VkPhysicalDevice in_device )
 {
     uint32_t queueFamilyCount = 0;
     uint32_t formatCount = 0;
     uint32_t extensionCount = 0;
     uint32_t presentModeCount = 0;
 
+    m_context = const_cast<crvkContext*>( in_context );
     m_physicalDevice = in_device;
     SDL_assert( m_physicalDevice != nullptr );
 
 #if VK_VERSION_1_2
     VkPhysicalDeviceSurfaceInfo2KHR deviceSurfaceInfo{}; 
     deviceSurfaceInfo.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SURFACE_INFO_2_KHR;
-    deviceSurfaceInfo.surface = in_surface;
+    deviceSurfaceInfo.surface = m_context->Surface();
     deviceSurfaceInfo.pNext = nullptr;
 
     // query device properties
+    m_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+    m_properties.pNext = nullptr;
     vkGetPhysicalDeviceProperties2( m_physicalDevice, &m_properties );
 
     // query device surface  capabilities
+    m_surfaceCapabilities.sType = VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_2_KHR;
     vkGetPhysicalDeviceSurfaceCapabilities2KHR( m_physicalDevice, &deviceSurfaceInfo, &m_surfaceCapabilities );
     
+    // query device suported surface formats
+    vkGetPhysicalDeviceSurfaceFormats2KHR( m_physicalDevice, &deviceSurfaceInfo, &formatCount, nullptr );
+    m_surfaceFormats.Alloc( formatCount );
+    vkGetPhysicalDeviceSurfaceFormats2KHR( m_physicalDevice, &deviceSurfaceInfo, &formatCount, &m_surfaceFormats );
+
     //
     vkGetPhysicalDeviceMemoryProperties2( m_physicalDevice, &m_memoryProperties );
 #else
@@ -315,9 +351,9 @@ bool crvkDevice::InitDevice( const VkPhysicalDevice in_device, const VkSurfaceKH
     vkEnumerateDeviceExtensionProperties( m_physicalDevice, nullptr, &extensionCount, &m_availableExtensions );
 
     // query device suported surface presenting mode
-    vkGetPhysicalDeviceSurfacePresentModesKHR( m_physicalDevice, in_surface, &presentModeCount, nullptr );
+    vkGetPhysicalDeviceSurfacePresentModesKHR( m_physicalDevice, m_context->Surface(), &presentModeCount, nullptr );
     m_presentModes.Alloc( presentModeCount );
-    vkGetPhysicalDeviceSurfacePresentModesKHR( m_physicalDevice, in_surface, &presentModeCount, &m_presentModes );
+    vkGetPhysicalDeviceSurfacePresentModesKHR( m_physicalDevice, m_context->Surface(), &presentModeCount, &m_presentModes );
     
     // query device queues
     vkGetPhysicalDeviceQueueFamilyProperties( m_physicalDevice, &queueFamilyCount, nullptr );
@@ -327,4 +363,99 @@ bool crvkDevice::InitDevice( const VkPhysicalDevice in_device, const VkSurfaceKH
 #if VK_KHR_copy_commands2
     m_deviceSuportedFeatures.copyCommands2Enabled = CheckExtensionSupport( VK_KHR_COPY_COMMANDS_2_EXTENSION_NAME );
 #endif 
+
+    return true;
+}
+
+void crvkDevice::Clear( void )
+{
+    m_surfaceFormats.Free();
+    m_availableExtensions.Free();
+    m_presentModes.Free();
+    m_queueFamilies.Free();
+}
+
+void crvkDevice::FindQueues(crvkPointer<VkDeviceQueueCreateInfo> &queueCreateInfos)
+{
+    uint32_t i = 0, j = 0;
+    VkBool32 canPresent;
+    uint32_t families[4] = { UINT32_MAX, UINT32_MAX, UINT32_MAX, UINT32_MAX };
+    uint32_t indices[4] = { 0, 0, 0, 0 };
+    crvkPointer<uint32_t> queueCount;
+    queueCount.Alloc( m_queueFamilies.Count() );
+    
+    // TODO: memset instead
+    for ( i = 0; i < m_queueFamilies.Count(); i++)
+    {
+        queueCount[i] = 0;
+    }
+    
+
+    // try find a queue 
+    for ( i = 0; i < 4; i++)
+    {
+        // first pass try find a independent family
+        for ( j = 0; j < m_queueFamilies.Count(); i++ )
+        {
+            auto q = m_queueFamilies[j];
+            switch ( i )
+            {
+            case crvkDeviceQueue::CRVK_DEVICE_QUEUE_GRAPHICS:
+            {
+                // already in use, try the next one
+                if (( families[(uint32_t)crvkDeviceQueue::CRVK_DEVICE_QUEUE_PRESENT] == j ) ||
+                    ( families[(uint32_t)crvkDeviceQueue::CRVK_DEVICE_QUEUE_COMPUTE] == j ) ||
+                    ( families[(uint32_t)crvkDeviceQueue::CRVK_DEVICE_QUEUE_TRANSFER] == j ) )
+                {
+                    continue;
+                }
+
+                // if we don't have availabe queues 
+                if ( !( q.queueFlags & VK_QUEUE_GRAPHICS_BIT ) || !( queueCount[j] < q.queueCount ) )
+                    continue;
+
+                families[i] = j;
+                indices[i] = queueCount[j]++;
+                
+            } break;
+            
+            case crvkDeviceQueue::CRVK_DEVICE_QUEUE_PRESENT:
+            {                
+                vkGetPhysicalDeviceSurfaceSupportKHR( m_physicalDevice, j, m_context->Surface(), &canPresent );
+                if( canPresent )
+                {
+
+                }
+            } break;
+
+            case crvkDeviceQueue::CRVK_DEVICE_QUEUE_COMPUTE:
+            {
+                if ( q.queueFlags & VK_QUEUE_GRAPHICS_BIT )
+                {
+                    /* code */
+                }
+            } break;
+
+            case crvkDeviceQueue::CRVK_DEVICE_QUEUE_TRANSFER:
+            {
+                if ( q.queueFlags & VK_QUEUE_GRAPHICS_BIT )
+                {
+                    /* code */
+                }
+            } break;
+            }      
+        }
+
+        // find a shared one 
+        for ( j = 0; j < m_queueFamilies.Count(); i++ )
+        {
+            
+        }
+
+        // create the queue 
+        if ( families[i] != UINT32_MAX )
+        {
+            m_queues[i] = new crvkDeviceQueue( families[i], indices[i], (crvkDeviceQueue::crvkQueueType)i );
+        }
+    }
 }

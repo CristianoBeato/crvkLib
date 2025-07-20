@@ -13,10 +13,8 @@
 // For full license terms, see the LICENSE file in the root of this repository.
 // ===============================================================================================
 
-#include "crvkImplement.hpp"
+#include "crvkPrecompiled.hpp"
 #include "crvkException.hpp"
-
-#include <cstdio>
 
 /*
 =================================================================================================

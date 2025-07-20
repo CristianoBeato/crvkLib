@@ -25,8 +25,6 @@
 
 #define NO_SDL_VULKAN_TYPEDEFS
 #include <SDL3/SDL_vulkan.h>
-#include <SDL3/SDL_assert.h>
-#include <SDL3/SDL_stdinc.h>
 
 #define CR_VERBOSE 1
 
@@ -77,6 +75,7 @@ extern const char* crvkGetLastError( void );
 extern void crvkAppendError( const char* in_error, const VkResult in_code );
 
 #include "crvkPointer.hpp"
+#include "crvkDynamicVector.hpp"
 #include "crvkException.hpp"
 #include "crvkContext.hpp"
 #include "crvkDevice.hpp"

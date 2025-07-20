@@ -26,6 +26,7 @@ public:
     typedef const _t*   const_pointer;
 
     crvkPointer( void );
+    crvkPointer( const uint32_t in_count );
     ~crvkPointer( void );
 
     void    Alloc( const uint32_t in_count, const uint32_t in_alignament = 8 );
@@ -44,7 +45,7 @@ public:
     const_pointer   operator&( void ) const { return m_data;} 
 
     reference       operator[]( const uint32_t i ) { return m_data[i]; }
-    const_reference operator[]( const uint32_t i ) const { return m_data[i] }
+    const_reference operator[]( const uint32_t i ) const { return m_data[i]; }
 
 private:
     uint32_t        m_count;
@@ -56,8 +57,14 @@ private:
 };
 
 template< typename _t >
-crvkPointer<_t>::crvkPointer( void ) : m_count( 0 ), m_data( nullptr )
+inline crvkPointer<_t>::crvkPointer( void ) : m_count( 0 ), m_data( nullptr )
 {
+}
+
+template <typename _t>
+inline crvkPointer<_t>::crvkPointer( const uint32_t in_count ) : m_count( 0 ), m_data( nullptr )
+{
+    Alloc( in_count );
 }
 
 template< typename _t >
@@ -70,8 +77,9 @@ template <typename _t>
 inline void crvkPointer<_t>::Alloc( const uint32_t in_count, const uint32_t in_alignament )
 {
     m_count = in_count;
-    m_data = SDL_alloc( sizeof( _t) * m_count );
-    SDL_assert( !m_data );
+    m_data = static_cast<pointer>( SDL_malloc( sizeof( _t) * m_count ) );
+    std::memset( m_data, 0x00, sizeof( _t) * m_count ); // this slow allocations, but, prevent some undefined behaviours 
+    SDL_assert( m_data != nullptr );
 }
 
 template <typename _t>

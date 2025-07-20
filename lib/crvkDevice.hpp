@@ -35,13 +35,12 @@ public:
 
     ~crvkDeviceQueue( void );
 
-#if VK_VERSION_1_3
     VkResult Submit( 
-                    const VkSemaphoreSubmitInfo* in_WaitSemaphoreInfos,
+                    const VkSemaphoreSubmitInfo* in_waitSemaphoreInfos,
                     const uint32_t in_waitSemaphoreInfoCount,
-                    const VkCommandBufferSubmitInfo* in_CommandBufferInfos,
+                    const VkCommandBufferSubmitInfo* in_commandBufferInfos,
                     const uint32_t in_commandBufferInfoCount,
-                    const VkSemaphoreSubmitInfo* in_SignalSemaphoreInfos,
+                    const VkSemaphoreSubmitInfo* in_signalSemaphoreInfos,
                     const uint32_t in_signalSemaphoreInfoCount, 
                     const VkFence in_fence );
 
@@ -79,9 +78,6 @@ private:
 class crvkDevice
 {
 public:
-    crvkDevice( void );
-    ~crvkDevice( void );
-
     bool    Create( const char** in_layers, const uint32_t in_layersCount, const char** in_deviceExtensions, const uint32_t in_deviceExtensionsCount );
     void    Destroy( void );
 
@@ -101,7 +97,11 @@ public:
 
 protected:
     friend class crvkContext;
-    bool    InitDevice( const VkPhysicalDevice in_device, const VkSurfaceKHR in_surface );
+    // we can't create a new class reference outside from crvkContext
+    crvkDevice( void );
+    ~crvkDevice( void );
+    bool    InitDevice( const crvkContext* in_context, const VkPhysicalDevice in_device );
+    void    Clear( void );
 
 private:
     crvkDeviceSuportedFeatures_t            m_deviceSuportedFeatures;
@@ -119,10 +119,13 @@ private:
     VkCommandPool                           m_commandPool;
     VkPhysicalDevice                        m_physicalDevice;
     VkDevice                                m_logicalDevice;
+    crvkContext*                            m_context;
     crvkPointer<VkExtensionProperties>      m_availableExtensions;
     crvkPointer<VkPresentModeKHR>           m_presentModes;
     crvkPointer<VkQueueFamilyProperties>    m_queueFamilies;
     crvkDeviceQueue*                        m_queues[4];
+
+    void    FindQueues( crvkPointer<VkDeviceQueueCreateInfo> &queueCreateInfos );
 
     // delete refernce 
     crvkDevice( const crvkDevice & ) = delete;

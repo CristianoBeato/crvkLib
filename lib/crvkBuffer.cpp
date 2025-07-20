@@ -13,11 +13,8 @@
 // For full license terms, see the LICENSE file in the root of this repository.
 // ===============================================================================================
 
-#include "crvkImplement.hpp"
+#include "crvkPrecompiled.hpp"
 #include "crvkBuffer.hpp"
-
-#include <cstring>
-#include <stdexcept>
 
 static const uint32_t k_CRVK_BUFFER_SEM_TYPE_FREE = 1;  // bufer is not in use
 static const uint32_t k_CRVK_BUFFER_SEM_TYPE_COPY = 2;  // buffer is perfoming a copy 

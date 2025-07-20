@@ -35,6 +35,7 @@ public:
     
     void    Destroy( void );
 
+    crvkDevice* const *         GetDeviceList( uint32_t* in_count ) const;
     VkInstance                  Instance( void ) const { return m_instance; }
     VkSurfaceKHR                Surface( void ) const { return m_surface; }
 
