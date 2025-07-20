@@ -485,13 +485,6 @@ void crvkBufferStaging::SubData( const void* in_data, const uintptr_t in_offset,
     std::memcpy( data, in_data, in_size );
     vkUnmapMemory( device, m_cpuBufferMemory );
 
-    // begin copy upload content to GPU     
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = m_device->CommandPool();
-    allocInfo.commandBufferCount = 1;
-
     // begin registering command buffer 
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
