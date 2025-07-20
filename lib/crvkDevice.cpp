@@ -21,17 +21,136 @@
 #include <algorithm>
 #include <stdexcept>
 
+crvkDeviceQueue::~crvkDeviceQueue( void )
+{
+    m_type = CRVK_DEVICE_QUEUE_NONE;
+    m_family = UINT32_MAX;
+    m_index = UINT32_MAX;
+    m_queue = nullptr;
+}
+
+VkResult crvkDeviceQueue::Submit(  
+    const VkSemaphoreSubmitInfo* in_WaitSemaphoreInfos,
+    const uint32_t in_waitSemaphoreInfoCount,
+    const VkCommandBufferSubmitInfo* in_CommandBufferInfos,
+    const uint32_t in_commandBufferInfoCount,
+    const VkSemaphoreSubmitInfo* in_SignalSemaphoreInfos,
+    const uint32_t in_signalSemaphoreInfoCount,
+    const VkFence in_fence )
+{
+    // 
+    VkSubmitInfo2 submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+    submitInfo.waitSemaphoreInfoCount = in_waitSemaphoreInfoCount;
+    submitInfo.pWaitSemaphoreInfos = in_WaitSemaphoreInfos;
+    submitInfo.commandBufferInfoCount = in_commandBufferInfoCount;
+    submitInfo.pCommandBufferInfos = in_CommandBufferInfos;
+    submitInfo.signalSemaphoreInfoCount = in_signalSemaphoreInfoCount;
+    submitInfo.pSignalSemaphoreInfos = in_SignalSemaphoreInfos;
+
+    return vkQueueSubmit2( m_queue, 1, &submitInfo, in_fence );
+}
+
+VkResult crvkDeviceQueue::Submit( const VkCommandBuffer* in_commandBuffers, const uint32_t in_commandBuffersCount )
+{
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = in_commandBuffersCount;
+    submitInfo.pCommandBuffers = in_commandBuffers;
+    return vkQueueSubmit( m_queue, 1, &submitInfo, VK_NULL_HANDLE );
+}
+
+VkResult crvkDeviceQueue::WaitIdle( void ) const
+{
+    return vkQueueWaitIdle( m_queue );
+}
+
+crvkDeviceQueue::crvkDeviceQueue( const uint32_t in_family, const uint32_t in_index, const crvkQueueType in_type ) : 
+    m_type( in_type ),
+    m_family( in_family ), 
+    m_index( in_index ) 
+{
+}
+
+bool crvkDeviceQueue::InitQueue(const VkDevice in_device)
+{
+    vkGetDeviceQueue( in_device, m_family, m_index, &m_queue );
+    return false;
+}
+
 crvkDevice::crvkDevice( void ) : m_physicalDevice( nullptr )
 {
+    m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_GRAPHICS] = nullptr;
+    m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_PRESENT] = nullptr;
+    m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_COMPUTE] = nullptr;
+    m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_TRANSFER] = nullptr;
 }
 
 crvkDevice::~crvkDevice( void )
-{
-    
+{   
 }
 
+bool crvkDevice::Create(const char **in_layers, const uint32_t in_layersCount, const char **in_deviceExtensions, const uint32_t in_deviceExtensionsCount)
+{
+    VkResult result = VK_SUCCESS;
 
-void crvkDevice::Destroy( void )
+    VkPhysicalDeviceFeatures deviceFeatures{};
+
+    VkDeviceCreateInfo deviceCI{};
+    deviceCI.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+
+    deviceCI.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
+    deviceCI.pQueueCreateInfos = queueCreateInfos.data();
+
+    deviceCI.pEnabledFeatures = &deviceFeatures;
+
+    deviceCI.enabledExtensionCount = in_deviceExtensionsCount;
+    deviceCI.ppEnabledExtensionNames = const_cast<const char* const*>( in_deviceExtensions );
+
+    if ( in_layersCount > 0 ) 
+    {
+        deviceCI.enabledLayerCount = in_layersCount;
+        deviceCI.ppEnabledLayerNames = in_layers;
+    } 
+    else 
+    {
+        deviceCI.enabledLayerCount = 0;
+        deviceCI.ppEnabledLayerNames = nullptr;
+    }
+
+    result = vkCreateDevice( m_physicalDevice, &deviceCI, &k_allocationCallbacks, &m_logicalDevice );
+    if ( result != VK_SUCCESS) 
+    {
+        // throw std::runtime_error("failed to create logical context->Device()!");
+        return false;
+    }
+
+    VkCommandPoolCreateInfo poolInfo{};
+    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    poolInfo.queueFamilyIndex = m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_GRAPHICS]->Family();
+
+    auto result = vkCreateCommandPool( m_logicalDevice, &poolInfo, &k_allocationCallbacks, &m_commandPool ); 
+    if ( result != VK_SUCCESS) 
+    {
+        //throw std::runtime_error("failed to create command pool!");
+        return false;
+    }
+
+    // get queues
+    for ( uint32_t i = 0; i < 4; i++)
+    {
+        // ignore if not avaidable 
+        if( m_queues[i] == nullptr )
+            continue;
+
+        m_queues[i]->InitQueue( m_logicalDevice );
+    }
+
+    return true;
+}
+
+void crvkDevice::Destroy(void)
 {
     if ( m_commandPool != nullptr )
     {
@@ -46,7 +165,7 @@ void crvkDevice::Destroy( void )
     }
 }
 
-VkExtent2D crvkDevice::FindExtent( const uint32_t in_width, const uint32_t in_height )
+VkExtent2D crvkDevice::FindExtent( const uint32_t in_width, const uint32_t in_height ) const
 {
 #if VK_VERSION_1_2
     auto capabilities = m_surfaceCapabilities.surfaceCapabilities;
@@ -69,7 +188,7 @@ VkExtent2D crvkDevice::FindExtent( const uint32_t in_width, const uint32_t in_he
     return actualExtent;
 }
 
-VkPresentModeKHR crvkDevice::FindPresentMode( const VkPresentModeKHR in_presentMode )
+VkPresentModeKHR crvkDevice::FindPresentMode( const VkPresentModeKHR in_presentMode ) const
 {
     for ( uint32_t i = 0; i < m_presentModes.Count(); i++)
     {
@@ -80,7 +199,7 @@ VkPresentModeKHR crvkDevice::FindPresentMode( const VkPresentModeKHR in_presentM
     return VK_PRESENT_MODE_FIFO_KHR;
 }
 
-VkSurfaceFormatKHR crvkDevice::FindSurfaceFormat( const VkFormat in_format, const VkColorSpaceKHR in_colorSpace )
+VkSurfaceFormatKHR crvkDevice::FindSurfaceFormat( const VkFormat in_format, const VkColorSpaceKHR in_colorSpace ) const
 { 
     for ( uint32_t i = 0; i < m_surfaceFormats.Count(); i++)
     {
@@ -100,7 +219,7 @@ VkSurfaceFormatKHR crvkDevice::FindSurfaceFormat( const VkFormat in_format, cons
 #endif 
 }
 
-uint32_t crvkDevice::FindMemoryType( const uint32_t typeFilter, const VkMemoryPropertyFlags properties )
+uint32_t crvkDevice::FindMemoryType( const uint32_t typeFilter, const VkMemoryPropertyFlags properties ) const
 {
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties( m_physicalDevice, &memProperties );
@@ -111,6 +230,27 @@ uint32_t crvkDevice::FindMemoryType( const uint32_t typeFilter, const VkMemoryPr
     }
 
     throw std::runtime_error("failed to find suitable memory type!");
+}
+
+crvkDeviceQueue* crvkDevice::GetQueue( const crvkDeviceQueue::crvkQueueType in_type ) const
+{
+    int i = (int)in_type;
+
+    // out of range
+    if ( i < 0 || i > 3 )
+        return nullptr;
+    
+    // get queue
+    return m_queues[i];
+}
+
+VkSurfaceCapabilitiesKHR crvkDevice::SurfaceCapabilities(void) const
+{
+#if VK_VERSION_1_2
+    return m_surfaceCapabilities.surfaceCapabilities;
+#else
+    return m_surfaceCapabilities;
+#endif
 }
 
 const bool crvkDevice::CheckExtensionSupport(const char *in_extension)
