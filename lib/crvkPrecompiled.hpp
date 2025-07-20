@@ -28,10 +28,10 @@
 #include <SDL3/SDL_assert.h>
 #include <SDL3/SDL_stdinc.h>
 
+#include "crvkCore.hpp"
 #include "crvkPointer.hpp"
 #include "crvkDynamicVector.hpp"
 #include "crvkException.hpp"
-#include "crvkCore.hpp"
 #include "crvkContext.hpp"
 #include "crvkDevice.hpp"
 #include "crvkSwapchain.hpp"
