@@ -29,10 +29,14 @@ public:
     crvkPointer( const uint32_t in_count );
     ~crvkPointer( void );
 
-    void    Alloc( const uint32_t in_count, const uint32_t in_alignament = 8 );
+    template<typename... Args>
+    void    New( Args&&... args );
+    void    Alloc( const uint32_t in_count, const uint32_t in_alignament = 8, const int in_initial = 0xFFFFFFFF );
     void    Realloc( const uint32_t in_count, const uint32_t in_alignament = 8 );
     void    Free( void );
+    void    Delete( void );
     void    Memcpy( const_pointer in_source, const uint32_t in_offset, const uint32_t in_count );
+    void    Memset( const int in_val );
 
     /// @brief Return the internal element count 
     /// @return 
@@ -74,11 +78,13 @@ crvkPointer<_t>::~crvkPointer( void )
 }
 
 template <typename _t>
-inline void crvkPointer<_t>::Alloc( const uint32_t in_count, const uint32_t in_alignament )
+inline void crvkPointer<_t>::Alloc( const uint32_t in_count, const uint32_t in_alignament, const int in_initial )
 {
     m_count = in_count;
     m_data = static_cast<pointer>( SDL_malloc( sizeof( _t) * m_count ) );
-    std::memset( m_data, 0x00, sizeof( _t) * m_count ); // this slow allocations, but, prevent some undefined behaviours 
+    if ( in_initial != 0xFFFFFFFF )
+        std::memset( m_data, in_initial, sizeof( _t) / m_count );
+    
     SDL_assert( m_data != nullptr );
 }
 
@@ -102,9 +108,24 @@ inline void crvkPointer<_t>::Free(void)
 }
 
 template <typename _t>
+inline void crvkPointer<_t>::Delete(void)
+{
+    if ( m_data != nullptr )
+        reinterpret_cast<pointer>( m_data )->~_t();
+
+    Free();
+}
+
+template <typename _t>
 inline void crvkPointer<_t>::Memcpy(const_pointer in_source, const uint32_t in_offset, const uint32_t in_count)
 {
     std::memcpy( &m_data[in_offset], in_source, sizeof( _t ) * in_count );
+}
+
+template <typename _t>
+inline void crvkPointer<_t>::Memset( const int in_val )
+{
+    std::memset( m_data, in_val, sizeof( _t ) * m_count );
 }
 
 #endif //!__CRVK_POINTER_HPP__

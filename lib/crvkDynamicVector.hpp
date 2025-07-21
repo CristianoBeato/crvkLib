@@ -30,11 +30,13 @@ public:
     typedef const _t*   const_pointer;
 
     crvkDynamicVector( void );
+    crvkDynamicVector( const crvkDynamicVector& in_ref );
     ~crvkDynamicVector( void );
 
     void    Clear( void );
     void    Resize( const uint32_t count );
     void    Memcpy( const_pointer in_source, const uint32_t in_offset, const uint32_t in_count );
+    void    Memset( const int32_t in_val );
 
     // insert a elemnt at end of teh vector
     uint32_t Append( const_reference ref );
@@ -52,6 +54,9 @@ public:
     reference       operator[]( const uint32_t i ) { return m_data[i]; }
     const_reference operator[]( const uint32_t i ) const { return m_data[i]; }
 
+    crvkDynamicVector& operator=( const crvkDynamicVector &in_ref );
+    const crvkDynamicVector operator=( const crvkDynamicVector &in_ref ) const;
+
 private:
     uint32_t    m_count;
     pointer     m_data;
@@ -60,6 +65,14 @@ private:
 template<typename _t>
 crvkDynamicVector<_t>::crvkDynamicVector( void ) : m_count( 0 ), m_data( nullptr )
 {
+}
+
+template <typename _t>
+inline crvkDynamicVector<_t>::crvkDynamicVector(const crvkDynamicVector &in_ref )
+{
+    // copy the reference content
+    Resize( in_ref.Count() );
+    Memcpy( &in_ref, 0, in_ref.Count() );
 }
 
 template<typename _t>
@@ -87,7 +100,12 @@ inline void crvkDynamicVector<_t>::Resize( const uint32_t in_count )
     if ( in_count < m_count || in_count == 0 )
         return;
 
-    m_data = static_cast<pointer>( SDL_realloc( m_data, sizeof( _t ) * m_count ) );
+    // create a new 
+    if( m_data == nullptr )
+        m_data = static_cast<pointer>( SDL_malloc( sizeof( _t ) * in_count ) );
+    else
+        m_data = static_cast<pointer>( SDL_realloc( m_data, sizeof( _t ) * in_count ) );
+        
     SDL_assert( m_data != nullptr );
     m_count = in_count;
 }
@@ -98,6 +116,11 @@ inline void crvkDynamicVector<_t>::Memcpy(const_pointer in_source, const uint32_
     std::memcpy( &m_data[in_offset], in_source, sizeof( _t ) * in_count );
 }
 
+template <typename _t>
+inline void crvkDynamicVector<_t>::Memset( const int32_t in_val )
+{
+    std::memset( m_data, in_val, sizeof(_t) * m_count );
+}
 
 template<typename _t>
 inline uint32_t crvkDynamicVector<_t>::Append( const_reference in_ref )
@@ -106,6 +129,22 @@ inline uint32_t crvkDynamicVector<_t>::Append( const_reference in_ref )
     m_data = static_cast<pointer>( SDL_realloc( m_data, sizeof(_t) * m_count ) );
     std::memcpy( &m_data[index], &in_ref, sizeof( _t ) );
     return index;
+}
+
+template <typename _t>
+inline crvkDynamicVector<_t> &crvkDynamicVector<_t>::operator=( const crvkDynamicVector<_t> &in_ref )
+{
+    Resize( in_ref.Count() ); // alloc array 
+    Memcpy( &in_ref, 0, in_ref.Count() ); // copy content
+    return *this;
+}
+
+template <typename _t>
+inline const crvkDynamicVector<_t> crvkDynamicVector<_t>::operator=(const crvkDynamicVector<_t> &in_ref) const
+{
+    Resize( in_ref.Count() ); // alloc array 
+    Memcpy( &in_ref, 0, in_ref.Count() ); // copy content
+    return *this;
 }
 
 #endif //!__CRVK_DYNAMIC_VECTOR_HPP__
