@@ -68,7 +68,13 @@ const crVertex vertices[4] =
     { { -0.5f,  0.5f, 0.0f }, { 0.0f, 1.0f }, { 1.0f, 0.0f, 1.0f } }, // LB
 };
 
-crvkTest::crvkTest( void ) : m_window( nullptr )
+crvkTest::crvkTest( void ) : 
+    m_window( nullptr ),
+    m_context( nullptr ),
+    m_device( nullptr ),
+    m_swapchain( nullptr ),
+    m_vertexBuffer( nullptr ),
+    m_elementBuffer( nullptr )
 {
 }
 
@@ -110,7 +116,8 @@ void crvkTest::InitVulkan(void)
     m_context = new crvkContext();
 
     // create our context instance 
-    m_context->Create( m_window, "crvkTest", "crvkLib", validationLayers, 1 );
+    if( !m_context->Create( m_window, "crvkTest", "crvkLib", validationLayers, 1 ) )
+        throw std::runtime_error( "can't create context!" );
 
     // get the device list 
     devices = m_context->GetDeviceList( &deviceCount );
@@ -119,7 +126,8 @@ void crvkTest::InitVulkan(void)
     // TODO: find the best device 
     // just pic the first 
     m_device = devices[0];
-    
+    m_device->Create( validationLayers, 1, deviceExtensions, 1 );
+
     // aquire window surface size 
     SDL_GetWindowSizeInPixels( m_window, &width, &height );
 
@@ -127,27 +135,30 @@ void crvkTest::InitVulkan(void)
 
     // create the swapchain 
     m_swapchain = new crvkSwapchain();
-    m_swapchain->Create( 
+    if( !m_swapchain->Create( 
         m_context,      // the context for error handling 
         m_device,       // aquire the device 
-        k_FRAME_COUNT,
+        m_device->FindBestImageCount( k_FRAME_COUNT ),
         // try find if device suport the requested swapchain properties 
         m_device->FindExtent( width, height ),
         m_device->FindSurfaceFormat( VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR ),
         m_device->FindPresentMode( VK_PRESENT_MODE_MAILBOX_KHR ),
         surfaceCapabilities.currentTransform
-    );
+    ) )
+        throw std::runtime_error( "can't create device!" );
 
     // Create the element buffer 
     m_elementBuffer = new crvkBufferStaging();
-    m_elementBuffer->Create( m_device, sizeof( uint16_t ) * 6, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, CRVK_BUFFER_DYNAMIC_STORAGE_BIT );
+    if( !m_elementBuffer->Create( m_device, sizeof( uint16_t ) * 6, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, CRVK_BUFFER_DYNAMIC_STORAGE_BIT ) )
+        throw std::runtime_error( "can't create element buffer" );
 
     // Copy the index to buffer 
     m_elementBuffer->SubData( indices, 0, sizeof( indices ) * 6 );
 
     // Create the vertex buffer
     m_vertexBuffer = new crvkBufferStaging();
-    m_vertexBuffer->Create( m_device, sizeof( crVertex ) * 4, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, CRVK_BUFFER_DYNAMIC_STORAGE_BIT );
+    if( !m_vertexBuffer->Create( m_device, sizeof( crVertex ) * 4, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, CRVK_BUFFER_DYNAMIC_STORAGE_BIT ) )
+        throw std::runtime_error( "can't create element buffer" );
 
     // copy vertex to buffer
     m_vertexBuffer->SubData( m_device, 0, sizeof( crVertex ) * 4 );
@@ -228,7 +239,7 @@ int main(int argc, char *argv[] )
     {
         app.Run();
     }
-    catch(const std::exception& e)
+    catch( const std::exception& e )
     {
         std::cerr << e.what() << '\n';
         return EXIT_FAILURE;
