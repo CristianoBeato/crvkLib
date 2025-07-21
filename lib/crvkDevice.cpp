@@ -18,19 +18,6 @@
 
 /*
 ==============================================
-crvkDeviceQueue::~crvkDeviceQueue
-==============================================
-*/
-crvkDeviceQueue::~crvkDeviceQueue( void )
-{
-    m_type = CRVK_DEVICE_QUEUE_NONE;
-    m_family = UINT32_MAX;
-    m_index = UINT32_MAX;
-    m_queue = nullptr;
-}
-
-/*
-==============================================
 crvkDeviceQueue::Submit
 ==============================================
 */
@@ -88,8 +75,31 @@ crvkDeviceQueue::crvkDeviceQueue
 crvkDeviceQueue::crvkDeviceQueue( const uint32_t in_family, const uint32_t in_index, const crvkQueueType in_type ) : 
     m_type( in_type ),
     m_family( in_family ), 
-    m_index( in_index ) 
+    m_index( in_index ),
+    m_queue( nullptr ),
+    m_commandPool( nullptr )
 {
+}
+
+/*
+==============================================
+crvkDeviceQueue::~crvkDeviceQueue
+==============================================
+*/
+crvkDeviceQueue::~crvkDeviceQueue( void )
+{
+    m_type = CRVK_DEVICE_QUEUE_NONE;
+    m_family = UINT32_MAX;
+    m_index = UINT32_MAX;
+    m_queue = nullptr;
+
+    if ( m_commandPool != nullptr )
+    {
+        vkDestroyCommandPool( m_device, m_commandPool, k_allocationCallbacks );
+        m_commandPool = nullptr;
+    }
+
+    m_device = nullptr;
 }
 
 /*
@@ -99,7 +109,21 @@ crvkDeviceQueue::InitQueue
 */
 bool crvkDeviceQueue::InitQueue(const VkDevice in_device)
 {
-    vkGetDeviceQueue( in_device, m_family, m_index, &m_queue );
+    m_device = in_device;
+
+    vkGetDeviceQueue( m_device, m_family, m_index, &m_queue );
+
+    VkCommandPoolCreateInfo poolInfo{};
+    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    poolInfo.queueFamilyIndex = m_family;
+    auto result = vkCreateCommandPool( in_device, &poolInfo, k_allocationCallbacks, &m_commandPool ); 
+    if ( result != VK_SUCCESS) 
+    {
+        crvkAppendError( "crvkDevice::Create::vkCreateCommandPool", result );
+        return false;
+    }
+
     return m_queue != nullptr;
 }
 
@@ -109,7 +133,6 @@ crvkDevice::crvkDevice
 ==============================================
 */
 crvkDevice::crvkDevice( void ) :
-    m_commandPool( nullptr ),
     m_physicalDevice( nullptr ),
     m_logicalDevice( nullptr ),
     m_context( nullptr )
@@ -153,7 +176,8 @@ bool crvkDevice::Create(const char **in_layers, const uint32_t in_layersCount, c
     // configure device features
     VkPhysicalDeviceFeatures deviceFeatures{};
 #if VK_VERSION_1_2  
-    
+    m_featuresv13.pNext = &m_featuresv12;
+    m_features.pNext = &m_featuresv13;    
     deviceCI.pNext = &m_features;
 #else
     deviceCI.pEnabledFeatures = &m_deviceSuportedFeatures;
@@ -177,18 +201,6 @@ bool crvkDevice::Create(const char **in_layers, const uint32_t in_layersCount, c
     if ( result != VK_SUCCESS) 
     {
         crvkAppendError( "crvkDevice::Create::vkCreateDevice", result );
-        return false;
-    }
-
-    VkCommandPoolCreateInfo poolInfo{};
-    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    poolInfo.queueFamilyIndex = m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_GRAPHICS]->Family();
-
-    result = vkCreateCommandPool( m_logicalDevice, &poolInfo, k_allocationCallbacks, &m_commandPool ); 
-    if ( result != VK_SUCCESS) 
-    {
-        crvkAppendError( "crvkDevice::Create::vkCreateCommandPool", result );
         return false;
     }
 
@@ -220,12 +232,6 @@ void crvkDevice::Destroy(void)
 
         delete m_queues[i];
         m_queues[i] = nullptr;
-    }
-    
-    if ( m_commandPool != nullptr )
-    {
-        vkDestroyCommandPool( m_logicalDevice, m_commandPool, k_allocationCallbacks );
-        m_commandPool = nullptr;
     }
     
     if ( m_logicalDevice != nullptr )
@@ -564,11 +570,25 @@ crvkDevice::Clear
 */
 void crvkDevice::Clear( void )
 {
+    for ( uint32_t i = 0; i < 4; i++)
+    {
+        delete m_queues[i];
+    }
+
+    if( m_logicalDevice != nullptr )
+    {
+        vkDestroyDevice( m_logicalDevice, k_allocationCallbacks );
+        m_logicalDevice = nullptr;
+    }
+
     m_surfaceFormats.Clear();
     m_availableExtensions.Clear();
     m_presentModes.Clear();
     m_queueFamilies.Clear();
+    m_physicalDevice = nullptr;
+    m_context = nullptr;
 }
+
 
 /*
 ==============================================

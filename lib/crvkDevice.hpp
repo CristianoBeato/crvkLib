@@ -34,8 +34,6 @@ public:
         CRVK_DEVICE_QUEUE_TRANSFER
     } crvkQueueType;
 
-    ~crvkDeviceQueue( void );
-
     VkResult Submit( 
                     const VkSemaphoreSubmitInfo* in_waitSemaphoreInfos,
                     const uint32_t in_waitSemaphoreInfoCount,
@@ -59,11 +57,16 @@ public:
 
     /// @brief
     /// @return 
-    VkQueue     Queue( void ) const { return m_queue; }
+    VkQueue         Queue( void ) const { return m_queue; }
+
+    /// @brief  
+    /// @return 
+    VkCommandPool   CommandPool( void ) const { return m_commandPool; }
 
 protected:
     friend class crvkDevice;
     crvkDeviceQueue( const uint32_t in_family, const uint32_t in_index, const crvkQueueType in_type );
+    ~crvkDeviceQueue( void );
     bool    InitQueue( const VkDevice in_device );
 
 private:
@@ -71,6 +74,8 @@ private:
     uint32_t        m_family;
     uint32_t        m_index;
     VkQueue         m_queue;
+    VkCommandPool   m_commandPool;
+    VkDevice        m_device;
 
     crvkDeviceQueue( const crvkDeviceQueue & ) = delete;
     crvkDeviceQueue operator=( const crvkDeviceQueue & ) = delete;
@@ -84,7 +89,6 @@ public:
 
     VkPhysicalDevice            PhysicalDevice( void ) const { return m_physicalDevice; }    
     VkDevice                    Device( void ) const { return m_logicalDevice; }
-    VkCommandPool               CommandPool( void ) const { return m_commandPool; }
     crvkDeviceQueue*            GetQueue( const crvkDeviceQueue::crvkQueueType in_type ) const;
     bool                        HasPresentQueue( void ) const;
     bool                        HasComputeQueue( void ) const;
@@ -125,7 +129,6 @@ private:
     VkPhysicalDeviceMemoryProperties            m_memoryProperties;
     crvkPointer<VkSurfaceFormatKHR>             m_surfaceFormats;
 #endif // VK_VERSION_1_2
-    VkCommandPool                               m_commandPool;
     VkPhysicalDevice                            m_physicalDevice;
     VkDevice                                    m_logicalDevice;
     crvkContext*                                m_context;

@@ -406,8 +406,11 @@ bool crvkBufferStaging::Create( const crvkDevice* in_device, const size_t in_siz
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = m_device->CommandPool();
     allocInfo.commandBufferCount = 1;
+    if( m_device->HasTransferQueue() )
+        allocInfo.commandPool = m_device->GetQueue(crvkDeviceQueue::CRVK_DEVICE_QUEUE_TRANSFER)->CommandPool();
+    else
+        allocInfo.commandPool = m_device->GetQueue(crvkDeviceQueue::CRVK_DEVICE_QUEUE_GRAPHICS)->CommandPool();
 
     result = vkAllocateCommandBuffers( device, &allocInfo, &m_commandBuffer );
     if ( result != VK_SUCCESS )
@@ -474,7 +477,11 @@ void crvkBufferStaging::Destroy( void )
     // release the buffer operation command buffer 
     if ( m_commandBuffer != nullptr )
     {
-        vkFreeCommandBuffers( device, m_device->CommandPool(), 1, &m_commandBuffer );
+        if ( m_device->HasComputeQueue() )
+            vkFreeCommandBuffers( device, m_device->GetQueue(crvkDeviceQueue::CRVK_DEVICE_QUEUE_TRANSFER)->CommandPool(), 1, &m_commandBuffer );
+        else
+            vkFreeCommandBuffers( device, m_device->GetQueue(crvkDeviceQueue::CRVK_DEVICE_QUEUE_GRAPHICS)->CommandPool(), 1, &m_commandBuffer );
+            
         m_commandBuffer = nullptr;
     }
 
@@ -514,20 +521,31 @@ crvkBufferStaging::SubData
 */
 void crvkBufferStaging::SubData( const void* in_data, const uintptr_t in_offset, const size_t in_size )
 {
+    VkResult result = VK_SUCCESS;
     void* data = nullptr;
     VkDevice device = m_device->Device();
     crvkDeviceQueue* queue = nullptr;
 
     // copy data to our CPU buffer 
-    vkMapMemory( device, m_cpuBufferMemory, in_offset, in_size, 0, &data );
+    result = vkMapMemory( device, m_cpuBufferMemory, in_offset, in_size, 0, &data );
     std::memcpy( data, in_data, in_size );
     vkUnmapMemory( device, m_cpuBufferMemory );
+    if( result != VK_SUCCESS )
+    {
+        crvkAppendError( "crvkBufferStaging::SubData::vkMapMemory", result );
+        return;
+    }
 
     // begin registering command buffer 
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    vkBeginCommandBuffer( m_commandBuffer, &beginInfo );
+    result = vkBeginCommandBuffer( m_commandBuffer, &beginInfo );
+    if( result != VK_SUCCESS )
+    {
+        crvkAppendError( "crvkBufferStaging::SubData::vkBeginCommandBuffer", result );
+        return;
+    }
 
     // perform a copy command 
     VkBufferCopy copyRegion{};
@@ -537,8 +555,13 @@ void crvkBufferStaging::SubData( const void* in_data, const uintptr_t in_offset,
     vkCmdCopyBuffer( m_commandBuffer, m_cpuBuffer, m_gpuBuffer, 1, &copyRegion );
 
     // End buffer recording 
-    vkEndCommandBuffer( m_commandBuffer );
-    
+    result = vkEndCommandBuffer( m_commandBuffer );
+    if( result != VK_SUCCESS )
+    {
+        crvkAppendError( "crvkBufferStaging::SubData::vkEndCommandBuffer", result );
+        return;
+    }
+
     // submint the copy command to the device queue 
     VkCommandBufferSubmitInfo commandBufferSubmitInfo{};
     commandBufferSubmitInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
@@ -565,7 +588,13 @@ void crvkBufferStaging::SubData( const void* in_data, const uintptr_t in_offset,
     else
         queue = m_device->GetQueue( crvkDeviceQueue::CRVK_DEVICE_QUEUE_GRAPHICS );       
 
-    queue->Submit( waitInfo, 2, &commandBufferSubmitInfo, 1, &signalInfo, 1, nullptr ); 
+    result = queue->Submit( waitInfo, 2, &commandBufferSubmitInfo, 1, &signalInfo, 1, nullptr );
+    if( result != VK_SUCCESS )
+    {
+        crvkAppendError( "crvkBufferStaging::SubData::vkQueueSubmit2", result );
+        return;
+    }
+
 }
 
 /*
