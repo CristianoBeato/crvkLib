@@ -25,8 +25,8 @@
 #include <cstdio> // std::snprintf
 #include <limits> // std::numeric_limits
 
-#include <SDL3/SDL_assert.h>
-#include <SDL3/SDL_stdinc.h>
+#include <SDL3/SDL_assert.h> // SDL_assert
+#include <SDL3/SDL_stdinc.h> // SDL_malloc, SDL_realloc, SDL_free
 
 #include "crvkCore.hpp"
 #include "crvkPointer.hpp"

@@ -18,6 +18,7 @@
 
 typedef struct
 {
+    bool timelineSemaphore = false;
     bool copyCommands2Enabled = false;
 } crvkDeviceSuportedFeatures_t;
 
@@ -89,6 +90,7 @@ public:
     bool                        HasComputeQueue( void ) const;
     bool                        HasTransferQueue( void ) const;
     VkSurfaceCapabilitiesKHR    SurfaceCapabilities( void ) const;
+    uint32_t                    FindBestImageCount( const uint32_t in_frames );
     VkExtent2D                  FindExtent( const uint32_t in_width, const uint32_t in_height ) const;
     VkPresentModeKHR            FindPresentMode( const VkPresentModeKHR in_presentMode ) const;
     VkSurfaceFormatKHR          FindSurfaceFormat( const VkFormat in_format, const VkColorSpaceKHR in_colorSpace ) const;
@@ -97,35 +99,42 @@ public:
 
 protected:
     friend class crvkContext;
+    friend class crvkBufferStaging;
     // we can't create a new class reference outside from crvkContext
     crvkDevice( void );
     ~crvkDevice( void );
     bool    InitDevice( const crvkContext* in_context, const VkPhysicalDevice in_device );
     void    Clear( void );
 
-private:
-    crvkDeviceSuportedFeatures_t            m_deviceSuportedFeatures;
-#ifdef VK_VERSION_1_2
-    VkPhysicalDeviceProperties2             m_properties;
-    VkSurfaceCapabilities2KHR               m_surfaceCapabilities;
-    VkPhysicalDeviceMemoryProperties2       m_memoryProperties;
-    crvkPointer<VkSurfaceFormat2KHR>        m_surfaceFormats;
-#else
-    VkPhysicalDeviceProperties              m_properties;
-    VkSurfaceCapabilitiesKHR                m_surfaceCapabilities;
-    VkPhysicalDeviceMemoryProperties        m_memoryProperties;
-    crvkPointer<VkSurfaceFormatKHR>         m_surfaceFormats;
-#endif // VK_VERSION_1_2
-    VkCommandPool                           m_commandPool;
-    VkPhysicalDevice                        m_physicalDevice;
-    VkDevice                                m_logicalDevice;
-    crvkContext*                            m_context;
-    crvkPointer<VkExtensionProperties>      m_availableExtensions;
-    crvkPointer<VkPresentModeKHR>           m_presentModes;
-    crvkPointer<VkQueueFamilyProperties>    m_queueFamilies;
-    crvkDeviceQueue*                        m_queues[4];
+    const bool TimelineSemaphoreAvailable( void ) const { return m_featuresv12.timelineSemaphore; }
 
-    void    FindQueues( crvkPointer<VkDeviceQueueCreateInfo> &queueCreateInfos );
+private:
+    crvkDeviceSuportedFeatures_t                m_deviceSuportedFeatures;
+#ifdef VK_VERSION_1_2
+    VkPhysicalDeviceProperties2                 m_properties;
+    VkPhysicalDeviceFeatures2                   m_features;
+    VkPhysicalDeviceVulkan12Features            m_featuresv12;
+    VkPhysicalDeviceVulkan13Features            m_featuresv13;
+    VkSurfaceCapabilities2KHR                   m_surfaceCapabilities;
+    VkPhysicalDeviceMemoryProperties2           m_memoryProperties;
+    crvkDynamicVector<VkSurfaceFormat2KHR>      m_surfaceFormats;
+#else
+    VkPhysicalDeviceProperties                  m_properties;
+    VkPhysicalDeviceFeatures                    m_features;
+    VkSurfaceCapabilitiesKHR                    m_surfaceCapabilities;
+    VkPhysicalDeviceMemoryProperties            m_memoryProperties;
+    crvkPointer<VkSurfaceFormatKHR>             m_surfaceFormats;
+#endif // VK_VERSION_1_2
+    VkCommandPool                               m_commandPool;
+    VkPhysicalDevice                            m_physicalDevice;
+    VkDevice                                    m_logicalDevice;
+    crvkContext*                                m_context;
+    crvkDynamicVector<VkExtensionProperties>    m_availableExtensions;
+    crvkDynamicVector<VkPresentModeKHR>         m_presentModes;
+    crvkDynamicVector<VkQueueFamilyProperties>  m_queueFamilies;
+    crvkDeviceQueue*                            m_queues[4];
+
+    void    FindQueues( crvkDynamicVector<VkDeviceQueueCreateInfo> &queueCreateInfos );
 
     // delete refernce 
     crvkDevice( const crvkDevice & ) = delete;
