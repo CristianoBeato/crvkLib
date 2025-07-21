@@ -16,19 +16,129 @@
 #include "crvkPrecompiled.hpp"
 #include "crvkBuffer.hpp"
 
-static const uint32_t k_CRVK_BUFFER_SEM_TYPE_FREE = 1;  // bufer is not in use
-static const uint32_t k_CRVK_BUFFER_SEM_TYPE_COPY = 2;  // buffer is perfoming a copy 
-static const uint32_t k_CRVK_BUFFER_SEM_TYPE_CLEAR = 3; // buffer is cleanig 
+/*
+==============================================
+crvkBuffer::crvkBuffer
+==============================================
+*/
+crvkBuffer::crvkBuffer( void ) : 
+    m_flags( 0 ),
+    m_useValue( 1 ),
+    m_copyValue( 1 ),
+    m_copySemaphore( nullptr ),
+    m_useSemaphore( nullptr ),
+    m_fence( nullptr ),
+    m_device( nullptr )
+{
+}
+
+/*
+==============================================
+crvkBuffer::~crvkBuffer
+==============================================
+*/
+crvkBuffer::~crvkBuffer(void)
+{
+    Destroy();
+}
+
+/*
+==============================================
+crvkBuffer::~crvkBuffer
+==============================================
+*/
+bool crvkBuffer::Create( const crvkDevice* in_device, const size_t in_size, const VkBufferUsageFlags in_usage, const uint32_t in_flags )
+{
+    VkResult result = VK_SUCCESS;
+    VkDevice device  = nullptr; 
+    m_device = const_cast<crvkDevice*>( in_device );
+    device = m_device->Device();
+
+    ///
+    /// Create Fence
+    /// ==========================================================================
+    VkFenceCreateInfo fenceCI{};
+    fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceCI.flags = 0; // VK_FENCE_CREATE_SIGNALED_BIT
+
+    result = vkCreateFence( device, &fenceCI, k_allocationCallbacks, &m_fence );
+    if ( result != VK_SUCCESS )
+    {
+        crvkAppendError( "crvkBufferStatic::Create::vkCreateFence", result );
+        return false;
+    }
+
+    ///
+    /// Create semaphores 
+    /// ==========================================================================
+    VkSemaphoreTypeCreateInfo timelineCreateInfo{};
+    timelineCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
+    timelineCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+    timelineCreateInfo.initialValue = 0;
+
+    VkSemaphoreCreateInfo copySemaphoreCI{};
+    copySemaphoreCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    copySemaphoreCI.flags = 0;
+    copySemaphoreCI.pNext = &timelineCreateInfo;
+
+    result = vkCreateSemaphore( device, &copySemaphoreCI, k_allocationCallbacks, &m_copySemaphore );
+    if ( result != VK_SUCCESS )
+    {
+        crvkAppendError( "crvkBufferStaging::Create::vkCreateSemaphore::COPY", result );
+        return false;
+    }
+
+    VkSemaphoreCreateInfo drawSemaphoreCI{};
+    drawSemaphoreCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    drawSemaphoreCI.flags = 0;
+    drawSemaphoreCI.pNext = &timelineCreateInfo;
+
+    result = vkCreateSemaphore( device, &drawSemaphoreCI, k_allocationCallbacks, &m_useSemaphore );
+    if ( result != VK_SUCCESS )
+    {
+        crvkAppendError( "crvkBufferStaging::Create::vkCreateSemaphore::DRAW", result );
+        return false;
+    }
+
+    return true;
+}
+
+/*
+==============================================
+crvkBuffer::~crvkBuffer
+==============================================
+*/
+void crvkBuffer::Destroy( void )
+{
+    auto device = m_device->Device();
+
+    if( m_useSemaphore != nullptr )
+    {
+        vkDestroySemaphore( device, m_useSemaphore, k_allocationCallbacks );
+        m_useSemaphore = nullptr;
+    }
+
+    if( m_copySemaphore != nullptr )
+    {
+        vkDestroySemaphore( device, m_copySemaphore, k_allocationCallbacks );
+        m_copySemaphore = nullptr;
+    }
+
+    if( m_fence != nullptr )
+    {
+        vkDestroyFence( device, m_fence, k_allocationCallbacks );
+        m_fence = nullptr;
+    }
+
+}
 
 /*
 ==============================================
 crvkBufferStatic::crvkBufferStatic
 ==============================================
 */
-crvkBufferStatic::crvkBufferStatic( void ) : 
-    m_device( nullptr), 
-    m_fence( nullptr ), 
-    m_semaphore( nullptr ),
+crvkBufferStatic::crvkBufferStatic( void ) :
+    crvkBuffer(),
     m_buffer( nullptr ), 
     m_memory( nullptr ) 
 {
@@ -43,6 +153,7 @@ crvkBufferStatic::~crvkBufferStatic( void )
 {
     Destroy();
 }
+
 
 /*
 ==============================================
@@ -230,22 +341,46 @@ VkBuffer crvkBufferStatic::Handle( void ) const
 
 /*
 ==============================================
-crvkBufferStatic::Fence
+crvkBufferStatic::SignalLastUse
 ==============================================
 */
-VkFence crvkBufferStatic::Fence( void ) const
+VkSemaphoreSubmitInfo crvkBuffer::SignalLastUse(void)
 {
-    return m_fence;
+    VkSemaphoreSubmitInfo useSignal{ VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO, nullptr, m_useSemaphore, ++m_useValue, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0 };
+    return useSignal;
 }
 
 /*
 ==============================================
-crvkBufferStatic::Semaphore
+crvkBufferStatic::SignalLastCopy
 ==============================================
 */
-VkSemaphore crvkBufferStatic::Semaphore(void) const
+VkSemaphoreSubmitInfo crvkBuffer::SignalLastCopy(void)
 {
-    return m_semaphore;
+    VkSemaphoreSubmitInfo copySignal{ VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO, nullptr, m_copySemaphore, ++m_copyValue, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0 };
+    return copySignal;
+}
+
+/*
+==============================================
+crvkBufferStatic::WaitLastUse
+==============================================
+*/
+VkSemaphoreSubmitInfo crvkBuffer::WaitLastUse(void)
+{
+    VkSemaphoreSubmitInfo waitUse{ VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO, nullptr, m_useSemaphore, m_useValue -1, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0 }; // wait finish last render 
+    return waitUse;
+}
+
+/*
+==============================================
+crvkBufferStatic::WaitLastCopy
+==============================================
+*/
+VkSemaphoreSubmitInfo crvkBuffer::WaitLastCopy(void)
+{
+    VkSemaphoreSubmitInfo waitCopy{ VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO, nullptr, m_copySemaphore, m_copyValue -1, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0 }; // wait finish last copy
+    return waitCopy;
 }
 
 /*
@@ -254,8 +389,7 @@ crvkBufferStaging::crvkBufferStaging
 ==============================================
 */
 crvkBufferStaging::crvkBufferStaging( void ) :
-    m_flags( 0 ),
-    m_device( nullptr ),
+    crvkBuffer(),
     m_gpuBuffer( nullptr ),
     m_cpuBuffer( nullptr ),
     m_gpuBufferMemory( nullptr ),
@@ -271,7 +405,6 @@ crvkBufferStaging::~crvkBufferStaging
 */
 crvkBufferStaging::~crvkBufferStaging( void )
 {
-    Destroy();
 }
 
 /*
@@ -288,13 +421,13 @@ bool crvkBufferStaging::Create( const crvkDevice* in_device, const size_t in_siz
     crvkDeviceQueue* tranfer = nullptr;
     VkMemoryRequirements memRequirements;
     
-    // set device
-    m_device = const_cast<crvkDevice*>( in_device );
-    device = m_device->Device(); 
-    
+    if( !crvkBuffer::Create( in_device, in_size, in_usage, in_flags ) )
+        return false;
+
     // get queues 
     graphics = m_device->GetQueue( crvkDeviceQueue::CRVK_DEVICE_QUEUE_GRAPHICS );
     tranfer = m_device->GetQueue( crvkDeviceQueue::CRVK_DEVICE_QUEUE_TRANSFER );
+    device = m_device->Device();
 
     VkMemoryAllocateInfo memoryAllocI{};
     memoryAllocI.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -419,37 +552,6 @@ bool crvkBufferStaging::Create( const crvkDevice* in_device, const size_t in_siz
         return false;
     }
 
-    ///
-    /// Create Fences and semaphores 
-    /// ==========================================================================
-    VkFenceCreateInfo fenceCreateInfo{};
-    fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceCreateInfo.flags = 0; // VK_FENCE_CREATE_SIGNALED_BIT
-
-    result = vkCreateFence( device, &fenceCreateInfo, k_allocationCallbacks, &m_fence );
-    if ( result != VK_SUCCESS )
-    {
-        crvkAppendError( "crvkBufferStatic::Create::vkCreateFence", result );
-        return false;
-    }
-
-    VkSemaphoreTypeCreateInfo timelineCreateInfo{};
-    timelineCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
-    timelineCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
-    timelineCreateInfo.initialValue = 0;
-
-    VkSemaphoreCreateInfo semaphoreCI{};
-    semaphoreCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    semaphoreCI.flags = 0;
-    semaphoreCI.pNext = &timelineCreateInfo;
-
-    result = vkCreateSemaphore( device, &semaphoreCI, k_allocationCallbacks, &m_semaphore );
-    if ( result != VK_SUCCESS )
-    {
-        crvkAppendError( "crvkBufferStaging::Create::vkCreateFence", result );
-        return false;
-    }
-
     return true;
 }
     
@@ -462,17 +564,8 @@ void crvkBufferStaging::Destroy( void )
 {
     VkDevice device = m_device->Device();
 
-    if( m_semaphore != nullptr )
-    {
-        vkDestroySemaphore( device, m_semaphore, k_allocationCallbacks );
-        m_semaphore = nullptr;
-    }
-
-    if( m_fence != nullptr )
-    {
-        vkDestroyFence( device, m_fence, k_allocationCallbacks );
-        m_fence = nullptr;
-    }
+    // release fences and semaphores
+    crvkBuffer::Destroy();
 
     // release the buffer operation command buffer 
     if ( m_commandBuffer != nullptr )
@@ -568,21 +661,15 @@ void crvkBufferStaging::SubData( const void* in_data, const uintptr_t in_offset,
     commandBufferSubmitInfo.commandBuffer = m_commandBuffer;
     
     // signal to GPU to wait for the copy end before use
-    VkSemaphoreSubmitInfo signalInfo{};
-    signalInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-    signalInfo.stageMask = VK_PIPELINE_STAGE_2_COPY_BIT;
-    signalInfo.semaphore = m_semaphore;
-    signalInfo.value = k_CRVK_BUFFER_SEM_TYPE_COPY;
-    signalInfo.deviceIndex = 0;
-    signalInfo.pNext = nullptr;
-
+    VkSemaphoreSubmitInfo signalInfo = SignalLastCopy();
+   
    // Wait for the last copy to finish, or buffer to be released  
     VkSemaphoreSubmitInfo waitInfo[2] = 
     {
-        { VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO, nullptr, m_semaphore, k_CRVK_BUFFER_SEM_TYPE_FREE, VK_PIPELINE_STAGE_2_COPY_BIT, 0 }, // wait device release the buffer 
-        { VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO, nullptr, m_semaphore, k_CRVK_BUFFER_SEM_TYPE_COPY, VK_PIPELINE_STAGE_2_COPY_BIT, 0 } // wait for last copy end 
+        WaitLastCopy(),
+        WaitLastUse(),
     };
-
+ 
     if ( m_device->HasTransferQueue() )
         queue = m_device->GetQueue( crvkDeviceQueue::CRVK_DEVICE_QUEUE_TRANSFER );
     else
@@ -594,7 +681,6 @@ void crvkBufferStaging::SubData( const void* in_data, const uintptr_t in_offset,
         crvkAppendError( "crvkBufferStaging::SubData::vkQueueSubmit2", result );
         return;
     }
-
 }
 
 /*
@@ -630,20 +716,12 @@ void crvkBufferStaging::GetSubData( void* in_data, const uintptr_t in_offset, co
     commandBufferSubmitInfo.commandBuffer = m_commandBuffer;
     
     // signal to GPU to wait for the copy end before use
-    VkSemaphoreSubmitInfo signalInfo{};
-    signalInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-    signalInfo.stageMask = VK_PIPELINE_STAGE_2_COPY_BIT;
-    signalInfo.semaphore = m_semaphore;
-    signalInfo.value = k_CRVK_BUFFER_SEM_TYPE_COPY; // signal that copy is done
-    signalInfo.deviceIndex = 0;
-    signalInfo.pNext = nullptr;
+    VkSemaphoreSubmitInfo signalInfo = SignalLastCopy();
 
     // Wait for the last copy to finish, or buffer to be released  
-    VkSemaphoreSubmitInfo waitInfo[2] = 
-    {
-        { VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO, nullptr, m_semaphore, k_CRVK_BUFFER_SEM_TYPE_FREE, VK_PIPELINE_STAGE_2_COPY_BIT, 0 }, // wait device release the buffer 
-        { VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO, nullptr, m_semaphore, k_CRVK_BUFFER_SEM_TYPE_COPY, VK_PIPELINE_STAGE_2_COPY_BIT, 0 } // wait for last copy end 
-    };
+    VkSemaphoreSubmitInfo waitInfo[2];
+    waitInfo[0] = WaitLastCopy(); // wait device release the buffer 
+    waitInfo[1] = WaitLastUse(); // wait for last copy end 
 
     if ( m_device->HasTransferQueue() )
         queue = m_device->GetQueue( crvkDeviceQueue::CRVK_DEVICE_QUEUE_TRANSFER );
@@ -651,10 +729,15 @@ void crvkBufferStaging::GetSubData( void* in_data, const uintptr_t in_offset, co
         queue = m_device->GetQueue( crvkDeviceQueue::CRVK_DEVICE_QUEUE_GRAPHICS );
 
     queue->Submit( waitInfo, 2, &commandBufferSubmitInfo, 1, &signalInfo, 1, m_fence );
-
+    
+#if 1
     // wait for device end copy the buffer 
     vkWaitForFences( device, 1, &m_fence, VK_TRUE, UINT64_MAX);
     vkResetFences( device, 1, &m_fence );
+#else
+    VkSemaphoreWaitInfo smWaitInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO, nullptr, 0, 1, &m_copySemaphore, 
+    vkWaitSemaphores( m_device->Device(), &smWaitInfo, UINT64_MAX );
+#endif
 
     // copy the content of the CPU buffer to the data pointer
     vkMapMemory( device, m_cpuBufferMemory, in_offset, in_size, 0, &data );
@@ -729,19 +812,13 @@ void crvkBufferStaging::Flush( const uintptr_t in_offset, const size_t in_size )
     commandBufferSubmitInfo.commandBuffer = m_commandBuffer;
         
     // Signal that copy has ended  
-    VkSemaphoreSubmitInfo signalInfo{};
-    signalInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-    signalInfo.stageMask = VK_PIPELINE_STAGE_2_COPY_BIT;
-    signalInfo.semaphore = m_semaphore;
-    signalInfo.value = k_CRVK_BUFFER_SEM_TYPE_COPY;
-    signalInfo.deviceIndex = 0;
-    signalInfo.pNext = nullptr;
+    VkSemaphoreSubmitInfo signalInfo = SignalLastCopy();
 
     // Wait for the last copy to finish, or buffer to be released  
     VkSemaphoreSubmitInfo waitInfo[2] = 
     {
-        { VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO, nullptr, m_semaphore, k_CRVK_BUFFER_SEM_TYPE_FREE, VK_PIPELINE_STAGE_2_COPY_BIT, 0 }, // wait device release the buffer 
-        { VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO, nullptr, m_semaphore, k_CRVK_BUFFER_SEM_TYPE_COPY, VK_PIPELINE_STAGE_2_COPY_BIT, 0 } // wait for last copy end 
+        WaitLastCopy(), // wait device release the buffer 
+        WaitLastUse(), // wait for last copy end 
     };
     
     // submint the copy command to the device queue 
@@ -770,24 +847,3 @@ VkBuffer crvkBufferStaging::Handle( void ) const
 {
     return m_cpuBuffer;
 }
-
-/*
-==============================================
-crvkBufferStaging::Fence
-==============================================
-*/
-VkFence crvkBufferStaging::Fence( void ) const
-{
-    return m_fence;
-}
-
-/*
-==============================================
-crvkBufferStaging::Handle
-==============================================
-*/
-VkSemaphore crvkBufferStaging::Semaphore( void ) const
-{
-    return m_semaphore;
-}
-

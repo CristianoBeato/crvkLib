@@ -30,7 +30,8 @@ static const uint32_t CRVK_BUFFER_MAP_COHERENT_BIT = 3 << 2;
 class crvkBuffer 
 {
 public:
-    crvkBuffer( void ) {}
+    crvkBuffer( void );
+    ~crvkBuffer( void );
 
     /// @brief Create the buffer object and allocate memory 
     /// @param in_device the orgin buffer 
@@ -38,11 +39,11 @@ public:
     /// @param in_usage buffer usage 
     /// @param in_flags 
     /// @return 
-    virtual bool        Create( const crvkDevice* in_device, const size_t in_size, const VkBufferUsageFlags in_usage, const uint32_t in_flags ) = 0;
+    virtual bool        Create( const crvkDevice* in_device, const size_t in_size, const VkBufferUsageFlags in_usage, const uint32_t in_flags );
 
     /// @brief 
     /// @param  
-    virtual void        Destroy( void ) = 0;
+    virtual void        Destroy( void );
 
     /// @brief 
     /// @param in_data 
@@ -77,14 +78,33 @@ public:
     /// @return 
     virtual VkBuffer    Handle( void ) const = 0;
 
-    /// @brief  
+protected:
+    uint32_t            m_flags;
+    uint64_t            m_useValue;
+    uint64_t            m_copyValue;
+    VkSemaphore         m_copySemaphore;
+    VkSemaphore         m_useSemaphore;    
+    VkFence             m_fence;
+    crvkDevice*         m_device;
+
+        /// @brief  
     /// @return /
-    virtual VkFence     Fence( void ) const = 0;
+    virtual VkFence     Fence( void ) const { return m_fence; };
 
     /// @brief 
     /// @param  
     /// @return 
-    virtual VkSemaphore Semaphore( void ) const = 0;
+    virtual VkSemaphore UseSemaphore( void ) const { return m_useSemaphore; };
+
+    /// @brief 
+    /// @param  
+    /// @return 
+    virtual VkSemaphore CopySemaphore( void ) const { return m_copySemaphore; }
+
+    VkSemaphoreSubmitInfo   SignalLastUse( void );
+    VkSemaphoreSubmitInfo   SignalLastCopy( void );
+    VkSemaphoreSubmitInfo   WaitLastUse( void );
+    VkSemaphoreSubmitInfo   WaitLastCopy( void );
 
 private:
     crvkBuffer( const crvkBuffer & ) = delete;
@@ -105,12 +125,8 @@ public:
     virtual void Unmap( void );
     virtual void Flush( const uintptr_t in_offset, const size_t in_size );
     virtual VkBuffer Handle( void ) const;
-    virtual VkFence Fence( void ) const;
-    virtual VkSemaphore Semaphore( void ) const;
 
 private:
-    crvkDevice*     m_device;
-    VkFence         m_fence;
     VkSemaphore     m_semaphore;
     VkBuffer        m_buffer;
     VkDeviceMemory  m_memory;
@@ -133,19 +149,13 @@ public:
     virtual void Unmap( void );
     virtual void Flush( const uintptr_t in_offset, const size_t in_size );
     virtual VkBuffer Handle( void ) const;
-    virtual VkFence Fence( void ) const;
-    virtual VkSemaphore Semaphore( void ) const;
 
 private:
     bool                m_semaphoreInUse;
-    uint32_t            m_flags;
-    crvkDevice*         m_device;
     VkBuffer            m_gpuBuffer;
     VkBuffer            m_cpuBuffer;
     VkDeviceMemory      m_gpuBufferMemory;
     VkDeviceMemory      m_cpuBufferMemory;
-    VkFence             m_fence;
-    VkSemaphore         m_semaphore;
     VkCommandBuffer     m_commandBuffer;
 };
 

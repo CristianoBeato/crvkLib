@@ -37,3 +37,20 @@
 
 # Operation:
     wait for semaphores from the wait list to reach the value 'N' => execute commands => signal semaphores from the signal list with the value 'N'
+
++------------------------+         +---------------------+
+|      CPU / Host        |         |       GPU           |
++------------------------+         +---------------------+
+         |                                  |
+         | vkQueueSubmit2                   |
+         |--------------------------------->|
+         |                                  |
+         |    Wait: timelineSemaphore (5)   |  <-- Bloqueia até valor 5
+         |    Signal: timelineSemaphore (6) |  --> Após executar, avança pra 6
+         |                                  |
+         |                                  |
++------------------------+         +---------------------+
+| TimelineSemaphore:     |         |     Execução        |
+|  Valor atual = 5       |         |  (Comandos do frame)|
+|                        |         |                     |
++------------------------+         +---------------------+
