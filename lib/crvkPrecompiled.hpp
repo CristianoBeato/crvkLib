@@ -34,6 +34,7 @@
 #include "crvkException.hpp"
 #include "crvkContext.hpp"
 #include "crvkDevice.hpp"
+#include "crvkSemaphore.hpp"
 #include "crvkSwapchain.hpp"
 #include "crvkBuffer.hpp"
 
