@@ -153,7 +153,7 @@ void crvkTest::InitVulkan(void)
         throw std::runtime_error( "can't create element buffer" );
 
     // Copy the index to buffer 
-    m_elementBuffer->SubData( indices, 0, sizeof( indices ) * 6 );
+    m_elementBuffer->SubData( indices, 0, sizeof( uint16_t ) * 6 );
 
     // Create the vertex buffer
     m_vertexBuffer = new crvkBufferStaging();
