@@ -44,8 +44,8 @@ private:
     VkInstance                          m_instance;
     VkDebugUtilsMessengerEXT            m_debugMessenger;
     VkSurfaceKHR                        m_surface;
-    crvkPointer<VkPhysicalDevice>       m_physicalDeviceList;
-    crvkPointer<crvkDevice*>            m_devicePropertiesList;
+    crvkDynamicVector<VkPhysicalDevice> m_physicalDeviceList;
+    crvkDynamicVector<crvkDevice*>      m_devicePropertiesList;
 
     bool CheckValidationLayerSupport( const char** in_layers, const uint32_t in_layersCount );
 

@@ -121,7 +121,7 @@ bool crvkContext::Create(
         instanceCI.pNext = nullptr;
     }
 
-    result = vkCreateInstance( &instanceCI, &k_allocationCallbacks, &m_instance );
+    result = vkCreateInstance( &instanceCI, k_allocationCallbacks, &m_instance );
     if ( result != VK_SUCCESS ) 
     {
         crvkAppendError("failed to create instance!", result );
@@ -133,7 +133,7 @@ bool crvkContext::Create(
         vkCreateDebugUtilsMessenger = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr( m_instance, "vkCreateDebugUtilsMessengerEXT" );
         vkDestroyDebugUtilsMessenger = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr( m_instance, "vkDestroyDebugUtilsMessengerEXT" );
 
-        result = vkCreateDebugUtilsMessenger( m_instance, &debugCI, &k_allocationCallbacks, &m_debugMessenger ); 
+        result = vkCreateDebugUtilsMessenger( m_instance, &debugCI, k_allocationCallbacks, &m_debugMessenger ); 
         if ( result != VK_SUCCESS ) 
         {
             crvkAppendError( "failed to set up debug messenger!", result );
@@ -142,7 +142,7 @@ bool crvkContext::Create(
  
     }
     
-    if ( !SDL_Vulkan_CreateSurface( const_cast<SDL_Window*>( in_whdn ), m_instance, &k_allocationCallbacks, &m_surface ) )
+    if ( !SDL_Vulkan_CreateSurface( const_cast<SDL_Window*>( in_whdn ), m_instance, k_allocationCallbacks, &m_surface ) )
     {            
         crvkAppendError( SDL_GetError(), VK_INCOMPLETE );
         return false;
@@ -156,14 +156,16 @@ bool crvkContext::Create(
         return false;
     }
 
-    m_physicalDeviceList.Alloc( deviceCount );
+    m_physicalDeviceList.Resize( deviceCount );
+    m_physicalDeviceList.Memset( 0x00000000 );
     vkEnumeratePhysicalDevices( m_instance, &deviceCount, &m_physicalDeviceList );
 
-    m_devicePropertiesList.Alloc( deviceCount );
+    m_devicePropertiesList.Resize( deviceCount );
+    m_devicePropertiesList.Memset( 0x00000000 );
     for ( uint32_t i = 0; i < deviceCount; i++)
     {
         // aquire device properties
-        m_devicePropertiesList[i] = static_cast<crvkDevice*>( SDL_malloc( sizeof( crvkDevice ) ) ); 
+        m_devicePropertiesList[i] = new crvkDevice();
         m_devicePropertiesList[i]->InitDevice( this, m_physicalDeviceList[i] );
     }
     
@@ -182,24 +184,24 @@ void crvkContext::Destroy(void)
         delete m_devicePropertiesList[i];
     }
     
-    m_physicalDeviceList.Free();
-    m_devicePropertiesList.Free();
+    m_physicalDeviceList.Clear();
+    m_devicePropertiesList.Clear();
 
     if( m_surface != nullptr )
     {
-        vkDestroySurfaceKHR( m_instance, m_surface, &k_allocationCallbacks );
+        vkDestroySurfaceKHR( m_instance, m_surface, k_allocationCallbacks );
         m_surface = nullptr;
     }
 
     if ( m_debugMessenger != nullptr )
     {
-        vkDestroyDebugUtilsMessenger( m_instance, m_debugMessenger, &k_allocationCallbacks );
+        vkDestroyDebugUtilsMessenger( m_instance, m_debugMessenger, k_allocationCallbacks );
         m_debugMessenger = nullptr;
     }
     
     if( m_instance != nullptr )
     {
-        vkDestroyInstance( m_instance, &k_allocationCallbacks );
+        vkDestroyInstance( m_instance, k_allocationCallbacks );
         m_instance = nullptr;
     }
 }
@@ -225,8 +227,10 @@ crvkContext::CheckValidationLayerSupport
 bool crvkContext::CheckValidationLayerSupport( const char ** in_layers, const uint32_t in_layersCount )
 {
     uint32_t layerCount = 0;
+    crvkDynamicVector<VkLayerProperties> availableLayers = crvkDynamicVector<VkLayerProperties>();
     vkEnumerateInstanceLayerProperties( &layerCount, nullptr );
-    crvkPointer<VkLayerProperties> availableLayers = crvkPointer<VkLayerProperties>( layerCount );
+    availableLayers.Resize( layerCount );
+    availableLayers.Memset( 0x00 );
     vkEnumerateInstanceLayerProperties( &layerCount, &availableLayers );
 
     for ( uint32_t i = 0; i < in_layersCount; i++)
