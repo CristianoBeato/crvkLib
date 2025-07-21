@@ -62,7 +62,7 @@ bool crvkBufferStatic::Create( const crvkDevice* in_device, const size_t in_size
     bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    result = vkCreateBuffer( device, &bufferInfo, &k_allocationCallbacks, &m_buffer );
+    result = vkCreateBuffer( device, &bufferInfo, k_allocationCallbacks, &m_buffer );
     if ( result != VK_SUCCESS) 
     {
         crvkAppendError( "crvkBufferStatic::Create::vkCreateBuffer", result );
@@ -77,7 +77,7 @@ bool crvkBufferStatic::Create( const crvkDevice* in_device, const size_t in_size
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = m_device->FindMemoryType( memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-    result = vkAllocateMemory( device, &allocInfo, &k_allocationCallbacks, &m_memory );
+    result = vkAllocateMemory( device, &allocInfo, k_allocationCallbacks, &m_memory );
     if ( result != VK_SUCCESS ) 
     {
         crvkAppendError( "crvkBufferStatic::Create::vkAllocateMemory", result );
@@ -95,7 +95,7 @@ bool crvkBufferStatic::Create( const crvkDevice* in_device, const size_t in_size
     fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceCI.flags = 0; // VK_FENCE_CREATE_SIGNALED_BIT
 
-    result = vkCreateFence( device, &fenceCI, &k_allocationCallbacks, &m_fence );
+    result = vkCreateFence( device, &fenceCI, k_allocationCallbacks, &m_fence );
     if ( result != VK_SUCCESS )
     {
         crvkAppendError( "crvkBufferStatic::Create::vkCreateFence", result );
@@ -106,7 +106,7 @@ bool crvkBufferStatic::Create( const crvkDevice* in_device, const size_t in_size
     semaphoreCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     semaphoreCI.flags = 0;
 
-    result = vkCreateSemaphore( device, &semaphoreCI, &k_allocationCallbacks, &m_semaphore );
+    result = vkCreateSemaphore( device, &semaphoreCI, k_allocationCallbacks, &m_semaphore );
     if ( result != VK_SUCCESS )
     {
         crvkAppendError( "crvkBufferStatic::Create::vkCreateFence", result );
@@ -126,25 +126,25 @@ void crvkBufferStatic::Destroy( void )
     VkDevice device = m_device->Device();
     if( m_semaphore != nullptr )
     {
-        vkDestroySemaphore( device, m_semaphore, &k_allocationCallbacks );
+        vkDestroySemaphore( device, m_semaphore, k_allocationCallbacks );
         m_semaphore = nullptr;
     }
 
     if( m_fence != nullptr )
     {
-        vkDestroyFence( device, m_fence, &k_allocationCallbacks );
+        vkDestroyFence( device, m_fence, k_allocationCallbacks );
         m_fence = nullptr;
     }
 
     if ( m_memory != nullptr )
     {
-        vkFreeMemory( device, m_memory, &k_allocationCallbacks );
+        vkFreeMemory( device, m_memory, k_allocationCallbacks );
         m_memory = nullptr;
     }
 
     if ( m_buffer != nullptr )
     {
-        vkDestroyBuffer( device, m_buffer, &k_allocationCallbacks );
+        vkDestroyBuffer( device, m_buffer, k_allocationCallbacks );
         m_buffer = nullptr;
     }
     
@@ -281,16 +281,20 @@ crvkBufferStaging::Create
 */
 bool crvkBufferStaging::Create( const crvkDevice* in_device, const size_t in_size, const VkBufferUsageFlags in_usage, const uint32_t in_flags )
 {
+    uint32_t queues[2]{ 0, 0 };
     VkResult result = VK_SUCCESS;
     VkDevice device = nullptr;
+    crvkDeviceQueue* graphics = nullptr;
+    crvkDeviceQueue* tranfer = nullptr;
     VkMemoryRequirements memRequirements;
     
+    // set device
     m_device = const_cast<crvkDevice*>( in_device );
     device = m_device->Device(); 
-
-    VkBufferCreateInfo bufferInfo{};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = in_size;
+    
+    // get queues 
+    graphics = m_device->GetQueue( crvkDeviceQueue::CRVK_DEVICE_QUEUE_GRAPHICS );
+    tranfer = m_device->GetQueue( crvkDeviceQueue::CRVK_DEVICE_QUEUE_TRANSFER );
 
     VkMemoryAllocateInfo memoryAllocI{};
     memoryAllocI.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -298,10 +302,35 @@ bool crvkBufferStaging::Create( const crvkDevice* in_device, const size_t in_siz
     //
     // Create the GPU side buffer 
     // ==========================================================================
-    bufferInfo.usage = in_usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    bufferInfo.sharingMode = m_device->HasTransferQueue() ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE;
-    
-    result = vkCreateBuffer( device, &bufferInfo, &k_allocationCallbacks, &m_gpuBuffer );
+    VkBufferCreateInfo gpuBufferCI{};
+    gpuBufferCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    gpuBufferCI.usage = in_usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    gpuBufferCI.size = in_size;
+
+    // TODO: add suport to compute queue
+    if ( tranfer != nullptr )
+    {
+        // if the graphics and transfer are in diferent families, we are using concurrent buffers 
+        if ( tranfer->Family() != graphics->Family() )         
+            gpuBufferCI.sharingMode = VK_SHARING_MODE_CONCURRENT;
+        else
+            gpuBufferCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+        queues[0] = graphics->Family();
+        queues[1] = tranfer->Family();
+        gpuBufferCI.pQueueFamilyIndices = queues; 
+        gpuBufferCI.queueFamilyIndexCount = 2;
+    }
+    else
+    {
+        // we don't have a tranfer queue, use only the graphic queue 
+        gpuBufferCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        queues[0] = graphics->Family();
+        gpuBufferCI.pQueueFamilyIndices = queues; 
+        gpuBufferCI.queueFamilyIndexCount = 1;
+    }
+
+    result = vkCreateBuffer( device, &gpuBufferCI, k_allocationCallbacks, &m_gpuBuffer );
     if ( result != VK_SUCCESS )
     {
         crvkAppendError( "crvkBufferStaging::Create::GPU::vkCreateBuffer", result );
@@ -313,7 +342,7 @@ bool crvkBufferStaging::Create( const crvkDevice* in_device, const size_t in_siz
     memoryAllocI.allocationSize = memRequirements.size;
     memoryAllocI.memoryTypeIndex = m_device->FindMemoryType( memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT );
 
-    result = vkAllocateMemory( device, &memoryAllocI, &k_allocationCallbacks, &m_gpuBufferMemory ); 
+    result = vkAllocateMemory( device, &memoryAllocI, k_allocationCallbacks, &m_gpuBufferMemory ); 
     if ( result != VK_SUCCESS )
     {
         crvkAppendError( "crvkBufferStaging::Create::GPU::vkAllocateMemory", result );
@@ -331,10 +360,20 @@ bool crvkBufferStaging::Create( const crvkDevice* in_device, const size_t in_siz
     //
     // Create the CPU side buffer 
     // ==========================================================================
-    bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-    bufferInfo.sharingMode = m_device->HasTransferQueue() ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE;
+    VkBufferCreateInfo cpuBufferCI{};
+    cpuBufferCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    cpuBufferCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT; // this is a staging buffer on CPU side
+    cpuBufferCI.size = in_size;
 
-    result = vkCreateBuffer( device, &bufferInfo, &k_allocationCallbacks, &m_cpuBuffer );
+    if ( m_device->HasTransferQueue() )
+        queues[0] = tranfer->Family();
+    else
+        queues[0] = graphics->Family();
+
+    cpuBufferCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // only graphic or only transfer use this buffer 
+    cpuBufferCI.queueFamilyIndexCount = 1;
+    cpuBufferCI.pQueueFamilyIndices = queues;
+    result = vkCreateBuffer( device, &cpuBufferCI, k_allocationCallbacks, &m_cpuBuffer );
     if ( result != VK_SUCCESS ) 
     {
         crvkAppendError( "crvkBufferStaging::Create::CPU::vkCreateBuffer", result );
@@ -346,7 +385,7 @@ bool crvkBufferStaging::Create( const crvkDevice* in_device, const size_t in_siz
     memoryAllocI.allocationSize = memRequirements.size;
     memoryAllocI.memoryTypeIndex = m_device->FindMemoryType( memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT );
 
-    result = vkAllocateMemory( device, &memoryAllocI, &k_allocationCallbacks, &m_cpuBufferMemory ); 
+    result = vkAllocateMemory( device, &memoryAllocI, k_allocationCallbacks, &m_cpuBufferMemory ); 
     if ( result != VK_SUCCESS ) 
     {        
         crvkAppendError( "crvkBufferStaging::Create::CPU::vkAllocateMemory", result );
@@ -380,12 +419,11 @@ bool crvkBufferStaging::Create( const crvkDevice* in_device, const size_t in_siz
     ///
     /// Create Fences and semaphores 
     /// ==========================================================================
-
     VkFenceCreateInfo fenceCreateInfo{};
     fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceCreateInfo.flags = 0; // VK_FENCE_CREATE_SIGNALED_BIT
 
-    result = vkCreateFence( device, &fenceCreateInfo, &k_allocationCallbacks, &m_fence );
+    result = vkCreateFence( device, &fenceCreateInfo, k_allocationCallbacks, &m_fence );
     if ( result != VK_SUCCESS )
     {
         crvkAppendError( "crvkBufferStatic::Create::vkCreateFence", result );
@@ -402,7 +440,7 @@ bool crvkBufferStaging::Create( const crvkDevice* in_device, const size_t in_siz
     semaphoreCI.flags = 0;
     semaphoreCI.pNext = &timelineCreateInfo;
 
-    result = vkCreateSemaphore( device, &semaphoreCI, &k_allocationCallbacks, &m_semaphore );
+    result = vkCreateSemaphore( device, &semaphoreCI, k_allocationCallbacks, &m_semaphore );
     if ( result != VK_SUCCESS )
     {
         crvkAppendError( "crvkBufferStaging::Create::vkCreateFence", result );
@@ -423,13 +461,13 @@ void crvkBufferStaging::Destroy( void )
 
     if( m_semaphore != nullptr )
     {
-        vkDestroySemaphore( device, m_semaphore, &k_allocationCallbacks );
+        vkDestroySemaphore( device, m_semaphore, k_allocationCallbacks );
         m_semaphore = nullptr;
     }
 
     if( m_fence != nullptr )
     {
-        vkDestroyFence( device, m_fence, &k_allocationCallbacks );
+        vkDestroyFence( device, m_fence, k_allocationCallbacks );
         m_fence = nullptr;
     }
 
@@ -443,28 +481,28 @@ void crvkBufferStaging::Destroy( void )
     // release CPU side buffer memory 
     if ( m_cpuBufferMemory != nullptr )
     {
-        vkFreeMemory( device, m_cpuBufferMemory, &k_allocationCallbacks );
+        vkFreeMemory( device, m_cpuBufferMemory, k_allocationCallbacks );
         m_cpuBufferMemory = nullptr; 
     }
     
     // release the CPU side buffer handler 
     if ( m_cpuBuffer != nullptr )
     {
-        vkDestroyBuffer( device, m_cpuBuffer, &k_allocationCallbacks );
+        vkDestroyBuffer( device, m_cpuBuffer, k_allocationCallbacks );
         m_cpuBuffer = nullptr;
     }
  
     // release GPU side buffer memory 
     if ( m_gpuBufferMemory != nullptr )
     {
-        vkFreeMemory( device, m_gpuBufferMemory, &k_allocationCallbacks );
+        vkFreeMemory( device, m_gpuBufferMemory, k_allocationCallbacks );
         m_gpuBufferMemory = nullptr; 
     }
     
     // release GPU side buffer handler 
     if ( m_gpuBuffer != nullptr )
     {
-        vkDestroyBuffer( device, m_gpuBuffer, &k_allocationCallbacks );
+        vkDestroyBuffer( device, m_gpuBuffer, k_allocationCallbacks );
         m_gpuBuffer = nullptr;
     }    
 }

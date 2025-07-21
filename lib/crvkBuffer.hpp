@@ -24,6 +24,7 @@ static const uint32_t CRVK_BUFFER_CLIENT_STORAGE_BIT    = 3 << 1; //
 // map buffer flags
 static const uint32_t CRVK_BUFFER_MAP_ACCESS_WRITE = 1 << 2; 
 static const uint32_t CRVK_BUFFER_MAP_ACCESS_READ = 2 << 2;
+static const uint32_t CRVK_BUFFER_MAP_COHERENT_BIT = 3 << 2;
 
 /// @brief our buffer base structure 
 class crvkBuffer 
