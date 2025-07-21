@@ -24,8 +24,9 @@ static VKAPI_ATTR void  VKAPI_CALL crvkFree( void* pUserData, void* pMemory );
 static VKAPI_ATTR void  VKAPI_CALL crvkInternalAllocation( void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope);
 static VKAPI_ATTR void  VKAPI_CALL crvkInternalFree( void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope );
    
+#if 0
 // our onw allocation structure using SDL_malloc
-const VkAllocationCallbacks k_allocationCallbacks = 
+const VkAllocationCallbacks k_allocationCallbacksLocal = 
 {
     nullptr,
     crvkAllocation,
@@ -34,6 +35,11 @@ const VkAllocationCallbacks k_allocationCallbacks =
     crvkInternalAllocation,
     crvkInternalFree
 };
+
+const VkAllocationCallbacks* k_allocationCallbacks = &k_allocationCallbacksLocal;
+#else
+const VkAllocationCallbacks* k_allocationCallbacks = nullptr;
+#endif
 
 // VK_EXT_debug_utils
 #if VK_EXT_debug_utils

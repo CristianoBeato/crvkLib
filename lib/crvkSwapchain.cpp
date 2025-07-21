@@ -61,6 +61,7 @@ bool crvkSwapchain::Create(
     VkDevice device = nullptr;
     VkSwapchainKHR oldSwapchain = nullptr;
     uint32_t queueFamilyIndices[2] { UINT32_MAX, UINT32_MAX };
+    m_frameCount = in_frames;
 
     m_device = const_cast<crvkDevice*>( in_device );
     device = m_device->Device();
@@ -120,7 +121,7 @@ bool crvkSwapchain::Create(
     swapchainCI.clipped = VK_TRUE;
     swapchainCI.oldSwapchain = oldSwapchain;
 
-    result = vkCreateSwapchainKHR( device, &swapchainCI, &k_allocationCallbacks, &m_swapChain );
+    result = vkCreateSwapchainKHR( device, &swapchainCI, k_allocationCallbacks, &m_swapChain );
     if ( result != VK_SUCCESS ) 
     {
         crvkAppendError( "crvkSwapchain::Create::vkCreateSwapchainKHR", result );
@@ -130,7 +131,7 @@ bool crvkSwapchain::Create(
     // Agora sim pode destruir a antiga
     if ( in_recreate && oldSwapchain != VK_NULL_HANDLE ) 
     {
-        vkDestroySwapchainKHR( device, oldSwapchain, &k_allocationCallbacks );
+        vkDestroySwapchainKHR( device, oldSwapchain, k_allocationCallbacks );
     }
 
     vkGetSwapchainImagesKHR( device, m_swapChain, &m_imageCount, nullptr );
@@ -157,9 +158,9 @@ bool crvkSwapchain::Create(
 
         // destroy old view 
         if ( in_recreate )
-            vkDestroyImageView( device, m_imageViews[i], &k_allocationCallbacks );
+            vkDestroyImageView( device, m_imageViews[i], k_allocationCallbacks );
         
-        result = vkCreateImageView( m_device->Device(), &createInfo, &k_allocationCallbacks, &m_imageViews[i] ); 
+        result = vkCreateImageView( m_device->Device(), &createInfo, k_allocationCallbacks, &m_imageViews[i] ); 
         if ( result != VK_SUCCESS ) 
         {
             crvkAppendError( "crvkSwapchain::Create::vkCreateImageView", result );
@@ -260,21 +261,21 @@ bool crvkSwapchain::Create(
 
     for (size_t i = 0; i < m_frameCount; i++) 
     {
-        result = vkCreateSemaphore( device, &semaphoreInfo, &k_allocationCallbacks, &m_imageAvailableSemaphores[i] ); 
+        result = vkCreateSemaphore( device, &semaphoreInfo, k_allocationCallbacks, &m_imageAvailableSemaphores[i] ); 
         if( result != VK_SUCCESS )
         {
             crvkAppendError( "crvkSwapchain::Create::vkCreateSemaphore", result );
             return false;
         }
         
-        result = vkCreateSemaphore( device, &semaphoreInfo, &k_allocationCallbacks, &m_renderFinishedSemaphores[i]);
+        result = vkCreateSemaphore( device, &semaphoreInfo, k_allocationCallbacks, &m_renderFinishedSemaphores[i]);
         if( result != VK_SUCCESS )
         {
             crvkAppendError( "crvkSwapchain::Create::vkCreateSemaphore", result );
             return false;    
         }
         
-        result = vkCreateFence( device, &fenceInfo, &k_allocationCallbacks, &m_inFlightFences[i] );
+        result = vkCreateFence( device, &fenceInfo, k_allocationCallbacks, &m_inFlightFences[i] );
         if( result != VK_SUCCESS )
         {
             crvkAppendError( "crvkSwapchain::Create::vkCreateFence", result );
@@ -297,8 +298,8 @@ void crvkSwapchain::Destroy( void )
     // release buffers and images 
     for ( i = 0; i < m_imageCount; i++)
     {
-        vkDestroyFramebuffer( m_device->Device(), m_framebuffers[i], &k_allocationCallbacks );
-        vkDestroyImageView( m_device->Device(), m_imageViews[i], &k_allocationCallbacks );
+        vkDestroyFramebuffer( m_device->Device(), m_framebuffers[i], k_allocationCallbacks );
+        vkDestroyImageView( m_device->Device(), m_imageViews[i], k_allocationCallbacks );
     }
     
     m_framebuffers.Free();
@@ -307,9 +308,9 @@ void crvkSwapchain::Destroy( void )
     // release semaphores and fences
     for ( i = 0; i < m_frameCount; i++ )
     {
-        vkDestroySemaphore( m_device->Device(), m_renderFinishedSemaphores[i], &k_allocationCallbacks );
-        vkDestroySemaphore( m_device->Device(), m_imageAvailableSemaphores[i], &k_allocationCallbacks );
-        vkDestroyFence( m_device->Device(), m_inFlightFences[i], &k_allocationCallbacks );
+        vkDestroySemaphore( m_device->Device(), m_renderFinishedSemaphores[i], k_allocationCallbacks );
+        vkDestroySemaphore( m_device->Device(), m_imageAvailableSemaphores[i], k_allocationCallbacks );
+        vkDestroyFence( m_device->Device(), m_inFlightFences[i], k_allocationCallbacks );
     }
     
     m_renderFinishedSemaphores.Free();
@@ -319,14 +320,14 @@ void crvkSwapchain::Destroy( void )
     // destroy render pass configuration
     if ( m_renderPass != nullptr )
     {
-        vkDestroyRenderPass( m_device->Device(), m_renderPass, &k_allocationCallbacks );
+        vkDestroyRenderPass( m_device->Device(), m_renderPass, k_allocationCallbacks );
         m_renderPass = nullptr;
     }
     
     // destoy the frander pass configuration
     if ( m_swapChain != nullptr )
     {
-        vkDestroySwapchainKHR( m_device->Device(), m_swapChain, &k_allocationCallbacks );
+        vkDestroySwapchainKHR( m_device->Device(), m_swapChain, k_allocationCallbacks );
         m_swapChain = nullptr;
     }
     

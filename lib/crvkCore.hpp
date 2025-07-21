@@ -28,7 +28,7 @@
 
 #define CR_VERBOSE 1
 
-extern const VkAllocationCallbacks  k_allocationCallbacks;
+extern const VkAllocationCallbacks* k_allocationCallbacks;
 
 // VK_EXT_debug_utils
 #if VK_EXT_debug_utils
