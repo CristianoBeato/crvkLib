@@ -39,6 +39,7 @@ crvkSwapchain::~crvkSwapchain
 */
 crvkSwapchain::~crvkSwapchain( void )
 {
+    Destroy();
 }
 
 /*
@@ -250,7 +251,6 @@ bool crvkSwapchain::Create(
     /// ==========================================================================
     m_imageAvailableSemaphores.Alloc( m_frameCount );
     m_renderFinishedSemaphores.Alloc( m_frameCount );
-    m_inFlightFences.Alloc( m_frameCount );
 
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
@@ -272,13 +272,6 @@ bool crvkSwapchain::Create(
         if( result != VK_SUCCESS )
         {
             crvkAppendError( "crvkSwapchain::Create::vkCreateSemaphore", result );
-            return false;    
-        }
-        
-        result = vkCreateFence( device, &fenceInfo, k_allocationCallbacks, &m_inFlightFences[i] );
-        if( result != VK_SUCCESS )
-        {
-            crvkAppendError( "crvkSwapchain::Create::vkCreateFence", result );
             return false;    
         }
     }
@@ -310,12 +303,10 @@ void crvkSwapchain::Destroy( void )
     {
         vkDestroySemaphore( m_device->Device(), m_renderFinishedSemaphores[i], k_allocationCallbacks );
         vkDestroySemaphore( m_device->Device(), m_imageAvailableSemaphores[i], k_allocationCallbacks );
-        vkDestroyFence( m_device->Device(), m_inFlightFences[i], k_allocationCallbacks );
     }
     
     m_renderFinishedSemaphores.Free();
     m_imageAvailableSemaphores.Free();
-    m_inFlightFences.Free();
 
     // destroy render pass configuration
     if ( m_renderPass != nullptr )
@@ -336,42 +327,42 @@ void crvkSwapchain::Destroy( void )
 
 /*
 ==============================================
-crvkSwapchain::Destroy
+crvkSwapchain::Begin
 ==============================================
 */
 VkResult crvkSwapchain::Begin( void )
 {
     VkResult result = VK_SUCCESS;
-    result = vkWaitForFences( m_device->Device(), 1, &m_inFlightFences[m_currentFrame], VK_TRUE, UINT64_MAX );
-    if ( result != VK_SUCCESS )
-        return result;
-
     result = vkAcquireNextImageKHR( m_device->Device(), m_swapChain, UINT64_MAX, m_imageAvailableSemaphores[m_currentFrame], VK_NULL_HANDLE, &m_imageIndex );
     if ( result != VK_SUCCESS )
         return result;
 
-    result = vkResetFences( m_device->Device(), 1, &m_inFlightFences[m_currentFrame] );
+    // Wait for previous render to finish ( replaced the fence )
+    VkSemaphoreWaitInfo waitRender{};
+    waitRender.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
+    waitRender.semaphoreCount = 1,
+    waitRender.pSemaphores = &m_renderFinishedSemaphores[m_currentFrame];
+    waitRender.pValues = nullptr;
+    result = vkWaitSemaphores( m_device->Device(), &waitRender, UINT64_MAX );
 
     return result;
 }
 
 /*
 ==============================================
-crvkSwapchain::Destroy
+crvkSwapchain::End
 ==============================================
 */
 VkResult crvkSwapchain::End( const VkCommandBuffer* in_commandBuffers, const uint32_t in_commandBufferCount )
 {
     VkResult result = VK_SUCCESS;
-
-    auto present = m_device->GetQueue( crvkDeviceQueue::CRVK_DEVICE_QUEUE_PRESENT ); // get the present queue
     auto graphic = m_device->GetQueue( crvkDeviceQueue::CRVK_DEVICE_QUEUE_GRAPHICS ); // get the graphic qeue
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
     VkSemaphore waitSemaphores[] = { m_imageAvailableSemaphores[m_currentFrame] };
-    VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+    VkPipelineStageFlags waitStages[] = {};
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = waitSemaphores;
     submitInfo.pWaitDstStageMask = waitStages;
@@ -383,25 +374,58 @@ VkResult crvkSwapchain::End( const VkCommandBuffer* in_commandBuffers, const uin
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    result = vkQueueSubmit( graphic->Queue(), 1, &submitInfo, m_inFlightFences[m_currentFrame] ) ;
+    VkSemaphoreSubmitInfo waitInfo{};
+    waitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    waitInfo.semaphore = m_imageAvailableSemaphores[m_currentFrame];
+    waitInfo.stageMask = /* VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT */ VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+    waitInfo.value = 0;
+    waitInfo.pNext = nullptr;
+
+    VkSemaphoreSubmitInfo signalInfo{};
+    signalInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    signalInfo.semaphore = m_renderFinishedSemaphores[m_currentFrame];
+    signalInfo.stageMask = /* VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT */ VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
+    signalInfo.value = 0;
+    signalInfo.pNext = nullptr;
+
+    crvkDynamicVector<VkCommandBufferSubmitInfo> commandBuffersSubmitInfo{};
+    commandBuffersSubmitInfo.Resize( in_commandBufferCount );
+    for ( uint32_t i = 0; i < in_commandBufferCount; i++)
+    {
+        commandBuffersSubmitInfo[i].sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+        commandBuffersSubmitInfo[i].deviceMask = 0;
+        commandBuffersSubmitInfo[i].commandBuffer = in_commandBuffers[i];
+        commandBuffersSubmitInfo[i].pNext = nullptr;
+    }
+    
+    result = graphic->Submit( &waitInfo, 1, &commandBuffersSubmitInfo, in_commandBufferCount, &signalInfo, 1, nullptr );
     if( result != VK_SUCCESS )
         return result;
+}
 
-    VkPresentInfoKHR presentInfo{};
-    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+/*
+==============================================
+crvkSwapchain::SwapBuffers
+==============================================
+*/
+VkResult crvkSwapchain::SwapBuffers( void )
+{
+    VkResult result = VK_SUCCESS;
+    auto present = m_device->GetQueue( crvkDeviceQueue::CRVK_DEVICE_QUEUE_PRESENT ); // get the present queue
 
-    presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = signalSemaphores;
+    // present to the window
+    uint32_t swapChainsImageIndex[]{ m_imageIndex };
+    VkSwapchainKHR swapChains[1]{ m_swapChain };
+    present->Present( swapChains, swapChainsImageIndex, 1, &m_renderFinishedSemaphores[m_currentFrame], 1 );
 
-    VkSwapchainKHR swapChains[] = { m_swapChain };
-    presentInfo.swapchainCount = 1;
-    presentInfo.pSwapchains = swapChains;
+    // Signals acquisition of the next image (now that it has been presented)
+    VkSemaphoreSignalInfo signalAcquire{};
+    signalAcquire.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO;
+    signalAcquire.semaphore = m_imageAvailableSemaphores[m_currentFrame];
+    signalAcquire.value = 0;
+    vkSignalSemaphore( m_device->Device(), &signalAcquire );
 
-    presentInfo.pImageIndices = &m_imageIndex;
-
-    // present to the window 
-    result = vkQueuePresentKHR( present->Queue(), &presentInfo );
-
+    // swap frame 
     m_currentFrame = ( m_currentFrame + 1) % m_frameCount;
 
     return result;

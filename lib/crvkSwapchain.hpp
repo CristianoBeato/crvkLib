@@ -49,11 +49,15 @@ public:
     /// @return VK_SUCCESS if not fail
     VkResult    Begin( void );
 
-    /// @brief Execute command buffers, and present to surface ( screen ) 
+    /// @brief Execute command buffers 
     /// @param in_commandBuffers 
     /// @param in_commandBufferCount 
     /// @return 
     VkResult    End( const VkCommandBuffer* in_commandBuffers, const uint32_t in_commandBufferCount );
+
+    /// @brief This will present to screen
+    /// @return 
+    VkResult    SwapBuffers( void );
 
     /// @brief The total concurrent frames  
     uint32_t    FrameCount( void ) const { return m_frameCount; }
@@ -85,7 +89,6 @@ private:
     crvkPointer<VkImage>            m_images;
     crvkPointer<VkImageView>        m_imageViews;
     crvkPointer<VkFramebuffer>      m_framebuffers;
-    crvkPointer<VkFence>            m_inFlightFences;
     crvkPointer<VkSemaphore>        m_imageAvailableSemaphores;
     crvkPointer<VkSemaphore>        m_renderFinishedSemaphores;
 };
