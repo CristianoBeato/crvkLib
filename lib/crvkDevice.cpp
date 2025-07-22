@@ -71,6 +71,28 @@ VkResult crvkDeviceQueue::Submit(
 
 /*
 ==============================================
+crvkDeviceQueue::Present
+==============================================
+*/
+VkResult crvkDeviceQueue::Present( 
+        const VkSwapchainKHR* in_swapchains,
+        const uint32_t* in_imageIndices,
+        const uint32_t in_swapchainCount,
+        const VkSemaphore* in_waitSemaphores,
+        const uint32_t in_waitSemaphoresCount )
+{
+    VkPresentInfoKHR presentInfo{};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    presentInfo.waitSemaphoreCount = in_waitSemaphoresCount;
+    presentInfo.pWaitSemaphores = in_waitSemaphores;
+    presentInfo.swapchainCount = in_swapchainCount;
+    presentInfo.pSwapchains = in_swapchains;
+    presentInfo.pImageIndices = in_imageIndices;
+    return vkQueuePresentKHR( m_queue, &presentInfo );
+}
+
+/*
+==============================================
 crvkDeviceQueue::WaitIdle
 ==============================================
 */

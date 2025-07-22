@@ -49,8 +49,14 @@ public:
         const VkSemaphore* in_waitSemaphores,
         const uint32_t in_waitSemaphoresCount,
         const VkSemaphore* in_signalSemaphores,
-        const uint32_t in_signalSemaphoresCount
-    );
+        const uint32_t in_signalSemaphoresCount );
+
+    VkResult    Present( 
+        const VkSwapchainKHR* in_swapchains,
+        const uint32_t* in_imageIndices,
+        const uint32_t in_swapchainCount,
+        const VkSemaphore* in_waitSemaphores,
+        const uint32_t in_waitSemaphoresCount );
 
     VkResult    WaitIdle( void ) const;
 
