@@ -29,12 +29,12 @@ public:
     uint64_t                CounterValue( void ) const;
     VkSemaphoreSubmitInfo   SignalSubmitInfo( const VkPipelineStageFlags2 in_stageFlags2 );
     VkSemaphoreSubmitInfo   WaitLastSubmitInfo( const VkPipelineStageFlags2 in_stageFlags2 );
-    VkSemaphore Semaphore( void ) const { return m_semaphore; }
+    VkSemaphore             Semaphore( void ) const { return m_semaphore; }
     
 private:
-    uint64_t            m_value;
-    VkSemaphore         m_semaphore;
-    crvkDevice*         m_device;
+    std::atomic<int64_t>    m_value;
+    VkSemaphore             m_semaphore;
+    crvkDevice*             m_device;
 };
 
 #endif //!__CRVK_SEMAPHORE_HPP__

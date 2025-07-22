@@ -133,7 +133,8 @@ crvkSemaphoreTimeline::CounterValue
 */
 VkSemaphoreSubmitInfo crvkSemaphoreTimeline::SignalSubmitInfo( const VkPipelineStageFlags2 in_stageFlags2 )
 {
-    VkSemaphoreSubmitInfo singal{ VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO, nullptr, m_semaphore, ++m_value, in_stageFlags2, 0 }; 
+    m_value.fetch_add( 1 );
+    VkSemaphoreSubmitInfo singal{ VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO, nullptr, m_semaphore, m_value, in_stageFlags2, 0 }; 
     return singal;
 }
 
@@ -144,6 +145,6 @@ crvkSemaphoreTimeline::CounterValue
 */
 VkSemaphoreSubmitInfo crvkSemaphoreTimeline::WaitLastSubmitInfo( const VkPipelineStageFlags2 in_stageFlags2 )
 {
-    VkSemaphoreSubmitInfo wait{ VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO, nullptr, m_semaphore, m_value -1, in_stageFlags2, 0 }; 
+    VkSemaphoreSubmitInfo wait{ VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO, nullptr, m_semaphore, m_value - 1, in_stageFlags2, 0 }; 
     return wait;
 }
