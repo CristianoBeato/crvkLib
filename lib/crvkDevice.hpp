@@ -43,7 +43,14 @@ public:
                     const uint32_t in_signalSemaphoreInfoCount, 
                     const VkFence in_fence );
 
-    VkResult Submit( const VkCommandBuffer* in_commandBuffers, const uint32_t in_commandBuffersCount );
+    VkResult Submit( 
+        const VkCommandBuffer* in_commandBuffers, 
+        const uint32_t in_commandBuffersCount, 
+        const VkSemaphore* in_waitSemaphores,
+        const uint32_t in_waitSemaphoresCount,
+        const VkSemaphore* in_signalSemaphores,
+        const uint32_t in_signalSemaphoresCount
+    );
 
     VkResult    WaitIdle( void ) const;
 

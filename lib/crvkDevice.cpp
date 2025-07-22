@@ -48,12 +48,24 @@ VkResult crvkDeviceQueue::Submit(
 crvkDeviceQueue::Submit
 ==============================================
 */
-VkResult crvkDeviceQueue::Submit( const VkCommandBuffer* in_commandBuffers, const uint32_t in_commandBuffersCount )
+VkResult crvkDeviceQueue::Submit( 
+    const VkCommandBuffer* in_commandBuffers, 
+    const uint32_t in_commandBuffersCount, 
+    const VkSemaphore* in_waitSemaphores,
+    const uint32_t in_waitSemaphoresCount,
+    const VkSemaphore* in_signalSemaphores,
+    const uint32_t in_signalSemaphoresCount
+)
 {
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = in_commandBuffersCount;
     submitInfo.pCommandBuffers = in_commandBuffers;
+    submitInfo.pWaitSemaphores = in_waitSemaphores;
+    submitInfo.waitSemaphoreCount = in_waitSemaphoresCount;
+    submitInfo.pSignalSemaphores = in_signalSemaphores;
+    submitInfo.signalSemaphoreCount = in_signalSemaphoresCount;
+
     return vkQueueSubmit( m_queue, 1, &submitInfo, VK_NULL_HANDLE );
 }
 
