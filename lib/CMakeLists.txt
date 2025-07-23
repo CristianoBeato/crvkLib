@@ -21,6 +21,10 @@ set( CRVK_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/crvkCore.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/crvkException.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/crvkException.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/crvkFence.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/crvkFence.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/crvkSemaphore.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/crvkSemaphore.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/crvkDevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/crvkDevice.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/crvkContext.cpp

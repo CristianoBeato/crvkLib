@@ -18,6 +18,95 @@
 
 /*
 ==============================================
+crvkSemaphore::crvkSemaphore
+==============================================
+*/
+crvkSemaphore::crvkSemaphore( void ) : m_device( nullptr ), m_semaphore( nullptr )
+{
+}
+
+/*
+==============================================
+crvkSemaphore::~crvkSemaphore
+==============================================
+*/
+crvkSemaphore::~crvkSemaphore( void )
+{
+}
+
+/*
+==============================================
+crvkSemaphore::Create
+==============================================
+*/
+bool crvkSemaphore::Create( const crvkDevice* in_device, const VkSemaphoreCreateFlags in_flags )
+{
+    m_device = const_cast<crvkDevice*>( in_device );
+
+    VkSemaphoreCreateInfo semaphoreCI{};
+    semaphoreCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    semaphoreCI.flags = in_flags;
+    semaphoreCI.pNext = nullptr;
+
+    VkResult result = vkCreateSemaphore( m_device->Device(), &semaphoreCI, k_allocationCallbacks, &m_semaphore );
+    if ( result != VK_SUCCESS )
+    {
+        crvkAppendError( "crvkSemaphore::Create::vkCreateSemaphore", result );
+        return false;
+    }
+    
+    return false;
+}
+
+/*
+==============================================
+crvkSemaphore::Destroy
+==============================================
+*/
+void crvkSemaphore::Destroy( void )
+{
+    if( m_semaphore != nullptr )
+    {
+        vkDestroySemaphore( m_device->Device(), m_semaphore, k_allocationCallbacks );
+        m_semaphore = nullptr;
+    }
+
+    m_device = nullptr;
+}
+
+/*
+==============================================
+crvkSemaphore::Signal
+==============================================
+*/
+VkResult crvkSemaphore::Signal( void ) const
+{
+    VkSemaphoreSignalInfo signalInfo{};
+    signalInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO;
+    signalInfo.semaphore = m_semaphore;
+    signalInfo.value = 0;
+    return vkSignalSemaphore( m_device->Device(), &signalInfo );   
+}
+
+/*
+==============================================
+crvkSemaphore::Wait
+==============================================
+*/
+VkResult crvkSemaphore::Wait( const VkSemaphoreWaitFlags in_flags, const uint64_t in_timeou ) const
+{
+    VkSemaphoreWaitInfo waitInfo{};
+    waitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
+    waitInfo.flags = in_flags;
+    waitInfo.pSemaphores = &m_semaphore;
+    waitInfo.semaphoreCount = 1;
+    waitInfo.pValues = nullptr;
+    waitInfo.pNext = nullptr;
+    return vkWaitSemaphores( m_device->Device(), &waitInfo, in_timeou );
+}
+
+/*
+==============================================
 crvkSemaphoreTimeline::crvkSemaphoreTimeline
 ==============================================
 */

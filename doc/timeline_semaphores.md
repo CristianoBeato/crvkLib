@@ -6,7 +6,7 @@
     
 # inicialização:
 # initialization:
-"
+
     VkSemaphoreTypeCreateInfo timelineCreateInfo{};
     timelineCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
     timelineCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
@@ -18,7 +18,7 @@
     semaphoreCI.pNext = &timelineCreateInfo;
 
     result = vkCreateSemaphore( device, &semaphoreCI, allocationCallbacks, &semaphore );
-"
+
 
 # descrição:
     Um semaphore de timeline é um tipo de VkSemaphore que tem um valor numérico associado a ele (chamado "valor de timeline").

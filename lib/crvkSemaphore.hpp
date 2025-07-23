@@ -16,6 +16,22 @@
 #ifndef __CRVK_SEMAPHORE_HPP__
 #define __CRVK_SEMAPHORE_HPP__
 
+class crvkSemaphore
+{
+public:
+    crvkSemaphore( void );
+    ~crvkSemaphore( void );
+    bool                    Create( const crvkDevice* in_device, const VkSemaphoreCreateFlags in_flags );
+    void                    Destroy( void );
+    VkResult                Signal( void ) const;
+    VkResult                Wait( const VkSemaphoreWaitFlags in_flags, const uint64_t in_timeou = UINT64_MAX ) const;
+    VkSemaphore             Semaphore( void ) const { return m_semaphore; }
+    
+private:
+    VkSemaphore             m_semaphore;
+    crvkDevice*             m_device;
+};
+
 class crvkSemaphoreTimeline
 {
 public:
