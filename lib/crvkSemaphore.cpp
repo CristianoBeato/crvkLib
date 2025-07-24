@@ -38,6 +38,7 @@ crvkSemaphore::~crvkSemaphore
 */
 crvkSemaphore::~crvkSemaphore( void )
 {
+    Destroy();
 }
 
 /*
@@ -47,14 +48,14 @@ crvkSemaphore::Create
 */
 bool crvkSemaphore::Create( const crvkDevice* in_device, const VkSemaphoreCreateFlags in_flags )
 {
-    m_device = const_cast<crvkDevice*>( in_device );
+    m_device = in_device->Device();
 
     VkSemaphoreCreateInfo semaphoreCI{};
     semaphoreCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
     semaphoreCI.flags = in_flags;
     semaphoreCI.pNext = nullptr;
 
-    VkResult result = vkCreateSemaphore( m_device->Device(), &semaphoreCI, k_allocationCallbacks, &m_semaphore );
+    VkResult result = vkCreateSemaphore( m_device, &semaphoreCI, k_allocationCallbacks, &m_semaphore );
     if ( result != VK_SUCCESS )
     {
         crvkAppendError( "crvkSemaphore::Create::vkCreateSemaphore", result );
@@ -73,7 +74,7 @@ void crvkSemaphore::Destroy( void )
 {
     if( m_semaphore != nullptr )
     {
-        vkDestroySemaphore( m_device->Device(), m_semaphore, k_allocationCallbacks );
+        vkDestroySemaphore( m_device, m_semaphore, k_allocationCallbacks );
         m_semaphore = nullptr;
     }
 
@@ -91,7 +92,7 @@ VkResult crvkSemaphore::Signal( void ) const
     signalInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO;
     signalInfo.semaphore = m_semaphore;
     signalInfo.value = 0;
-    return vkSignalSemaphore( m_device->Device(), &signalInfo );   
+    return vkSignalSemaphore( m_device, &signalInfo );   
 }
 
 /*
@@ -108,7 +109,17 @@ VkResult crvkSemaphore::Wait( const VkSemaphoreWaitFlags in_flags, const uint64_
     waitInfo.semaphoreCount = 1;
     waitInfo.pValues = nullptr;
     waitInfo.pNext = nullptr;
-    return vkWaitSemaphores( m_device->Device(), &waitInfo, in_timeou );
+    return vkWaitSemaphores( m_device, &waitInfo, in_timeou );
+}
+
+/*
+==============================================
+crvkSemaphore::Semaphore
+==============================================
+*/
+VkSemaphore crvkSemaphore::Semaphore( void ) const
+{
+    return m_semaphore;
 }
 
 /*
@@ -139,7 +150,7 @@ crvkSemaphoreTimeline::Create
 */
 bool crvkSemaphoreTimeline::Create( const crvkDevice* in_device, const uint32_t in_initialValue )
 {
-    m_device = const_cast<crvkDevice*>( in_device );
+    m_device = in_device->Device();
     
     VkSemaphoreTypeCreateInfo timelineCreateInfo{};
     timelineCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
@@ -151,7 +162,7 @@ bool crvkSemaphoreTimeline::Create( const crvkDevice* in_device, const uint32_t 
     semaphoreCI.flags = 0;
     semaphoreCI.pNext = &timelineCreateInfo;
 
-    auto result = vkCreateSemaphore( m_device->Device(), &semaphoreCI, k_allocationCallbacks, &m_semaphore );
+    auto result = vkCreateSemaphore( m_device, &semaphoreCI, k_allocationCallbacks, &m_semaphore );
     if( result != VK_SUCCESS )
     {
         crvkAppendError( "crvkSemaphoreTimeline::Create::vkCreateSemaphore", result );
@@ -170,7 +181,7 @@ void crvkSemaphoreTimeline::Destroy( void )
 {
     if ( m_semaphore != nullptr )
     {
-        vkDestroySemaphore( m_device->Device(), m_semaphore, k_allocationCallbacks );
+        vkDestroySemaphore( m_device, m_semaphore, k_allocationCallbacks );
         m_semaphore = nullptr;
     }
     
@@ -190,7 +201,7 @@ VkResult crvkSemaphoreTimeline::Signal( const uint64_t in_value ) const
     signalInfo.semaphore = m_semaphore;
     signalInfo.value = in_value;
 
-    return vkSignalSemaphore( m_device->Device(), &signalInfo );   
+    return vkSignalSemaphore( m_device, &signalInfo );   
 }
 
 /*
@@ -206,7 +217,7 @@ VkResult crvkSemaphoreTimeline::Wait( const uint64_t in_timeout ) const
     waitInfo.pSemaphores = &m_semaphore;
     waitInfo.semaphoreCount = 1;
  
-    return vkWaitSemaphores( m_device->Device(), &waitInfo, in_timeout );
+    return vkWaitSemaphores( m_device, &waitInfo, in_timeout );
 }
 
 /*
@@ -217,7 +228,7 @@ crvkSemaphoreTimeline::CounterValue
 uint64_t crvkSemaphoreTimeline::CounterValue(void) const
 {
     uint64_t value = 0;
-    vkGetSemaphoreCounterValue( m_device->Device(), m_semaphore, &value );
+    vkGetSemaphoreCounterValue( m_device, m_semaphore, &value );
     return value;
 }
 

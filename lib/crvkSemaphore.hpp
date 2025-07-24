@@ -27,15 +27,27 @@ class crvkSemaphore
 public:
     crvkSemaphore( void );
     ~crvkSemaphore( void );
+
+    /// @brief Create semaphore object 
+    /// @param in_device 
+    /// @param in_flags 
+    /// @return true on success, false on a error 
     bool                    Create( const crvkDevice* in_device, const VkSemaphoreCreateFlags in_flags );
+
+    /// @brief Destroy the semaphore 
+    /// @param  
     void                    Destroy( void );
+
+    /// @brief 
+    /// @param  
+    /// @return 
     VkResult                Signal( void ) const;
     VkResult                Wait( const VkSemaphoreWaitFlags in_flags, const uint64_t in_timeou = UINT64_MAX ) const;
-    VkSemaphore             Semaphore( void ) const { return m_semaphore; }
+    VkSemaphore             Semaphore( void ) const;
     
 private:
-    VkSemaphore             m_semaphore;
-    crvkDevice*             m_device;
+    VkDevice    m_device;
+    VkSemaphore m_semaphore;
 };
 
 class crvkSemaphoreTimeline
@@ -56,7 +68,7 @@ public:
 private:
     std::atomic<int64_t>    m_value;
     VkSemaphore             m_semaphore;
-    crvkDevice*             m_device;
+    VkDevice                m_device;
 };
 
 #endif //!__CRVK_SEMAPHORE_HPP__

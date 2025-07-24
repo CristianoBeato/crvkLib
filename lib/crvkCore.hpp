@@ -86,8 +86,10 @@ extern void crvkAppendError( const char* in_error, const VkResult in_code );
 #include "crvkContext.hpp"
 #include "crvkDevice.hpp"
 #include "crvkFence.hpp"
+#include "crvkCommandBuffer.hpp"
 #include "crvkSemaphore.hpp"
 #include "crvkSwapchain.hpp"
 #include "crvkBuffer.hpp"
+#include "crvkPipeline.hpp"
 
 #endif //__CRVK_IMPLEMENTATION_HPP__

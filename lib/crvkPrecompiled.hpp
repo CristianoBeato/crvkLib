@@ -43,7 +43,9 @@
 #include "crvkDevice.hpp"
 #include "crvkFence.hpp"
 #include "crvkSemaphore.hpp"
+#include "crvkCommandBuffer.hpp"
 #include "crvkSwapchain.hpp"
 #include "crvkBuffer.hpp"
+#include "crvkPipeline.hpp"
 
 #endif //__CRVK_PRECOMPILED_HPP__
