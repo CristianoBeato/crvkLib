@@ -47,7 +47,7 @@ else()
 endif()
 
 # 
-include_directories( ${CMAKE_SOURCE_DIR}/lib )
+include_directories( ${CMAKE_SOURCE_DIR}/lib/include )
 
 add_subdirectory( lib )
 add_subdirectory( test )

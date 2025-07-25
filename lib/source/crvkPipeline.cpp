@@ -101,7 +101,7 @@ bool crvkPipelineCommand::Create(
     pipelineLayoutCI.setLayoutCount = 0;
     pipelineLayoutCI.pushConstantRangeCount = 0;
 
-    auto result = vkCreatePipelineLayout( m_device, &pipelineLayoutCI, k_allocationCallbacks, &m_pipelineLayout ); 
+    result = vkCreatePipelineLayout( m_device, &pipelineLayoutCI, k_allocationCallbacks, &m_pipelineLayout ); 
     if( result != VK_SUCCESS) 
     {
         crvkAppendError( "crvkPipelineCommand::Create::vkCreatePipelineLayout", result );
@@ -143,7 +143,7 @@ bool crvkPipelineCommand::Create(
     allocInfo.commandBufferCount = in_frames;
     
     m_commandBuffers.Resize( in_frames );
-    VkResult result = vkAllocateCommandBuffers( m_device, &allocInfo, &m_commandBuffers );
+    result = vkAllocateCommandBuffers( m_device, &allocInfo, &m_commandBuffers );
     if ( result != VK_SUCCESS ) 
     {   
         

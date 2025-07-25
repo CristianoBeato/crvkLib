@@ -585,15 +585,13 @@ void crvkCommandBuffer::PipelineBarrier(    const VkDependencyFlags in_dependenc
     vkCmdPipelineBarrier2( m_commandBuffer, &dependencyInfo );
 }
 
-
-
 /*
 ==============================================
 crvkCommandBuffer::WaitEvents
 ==============================================
 */
 void crvkCommandBuffer::WaitEvents( const uint32_t in_eventCount,
-                                    const const VkEvent* in_events, 
+                                    const VkEvent* in_events, 
                                     const VkDependencyFlags in_dependencyFlags,
                                     const uint32_t in_memoryBarrierCount,
                                     const VkMemoryBarrier2* in_memoryBarriers,

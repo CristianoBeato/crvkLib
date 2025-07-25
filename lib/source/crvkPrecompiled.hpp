@@ -35,9 +35,10 @@
 #include <SDL3/SDL_assert.h> // SDL_assert
 #include <SDL3/SDL_stdinc.h> // SDL_malloc, SDL_realloc, SDL_free
 
-#include "crvkCore.hpp"
 #include "crvkPointer.hpp"
 #include "crvkDynamicVector.hpp"
+
+#include "crvkCore.hpp"
 #include "crvkException.hpp"
 #include "crvkContext.hpp"
 #include "crvkDevice.hpp"

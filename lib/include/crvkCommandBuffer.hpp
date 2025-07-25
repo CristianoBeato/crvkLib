@@ -179,7 +179,7 @@ public:
                             const VkClearRect* in_rects ) const;
 
     void WaitEvents( const uint32_t in_eventCount,
-                     const const VkEvent* in_events,  
+                     const VkEvent* in_events,  
                      const VkDependencyFlags in_dependencyFlags,
                      const uint32_t in_memoryBarrierCount,
                      const VkMemoryBarrier2* in_memoryBarriers,

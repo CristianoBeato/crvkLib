@@ -80,8 +80,14 @@ extern void vkLoadVulkanDebugUtilsProcs( VkInstance in_instance );
 extern const char* crvkGetLastError( void );
 extern void crvkAppendError( const char* in_error, const VkResult in_code );
 
-#include "crvkPointer.hpp"
-#include "crvkDynamicVector.hpp"
+template<typename _t>
+class crvkDynamicVector;
+
+template< typename _t >
+class crvkPointer;
+
+//#include "crvkPointer.hpp"
+//#include "crvkDynamicVector.hpp"
 #include "crvkException.hpp"
 #include "crvkContext.hpp"
 #include "crvkDevice.hpp"

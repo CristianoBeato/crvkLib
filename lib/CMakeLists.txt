@@ -20,29 +20,32 @@
 ################################################################################
 
 set( CRVK_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/crvkPrecompiled.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/crvkCore.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/crvkCore.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/crvkException.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/crvkException.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/crvkFence.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/crvkFence.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/crvkSemaphore.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/crvkSemaphore.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/crvkDevice.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/crvkDevice.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/crvkContext.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/crvkContext.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/crvkCommandBuffer.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/crvkCommandBuffer.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/crvkSwapchain.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/crvkSwapchain.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/crvkBuffer.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/crvkBuffer.hpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/crvkPipeline.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/crvkPipeline.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkBuffer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkCore.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkCommandBuffer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkContext.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkDevice.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkException.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkFence.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkPipeline.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkSemaphore.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkSwapchain.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkPrecompiled.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkPointer.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkDynamicVector.hpp
+    
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/crvkBuffer.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/crvkCommandBuffer.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/crvkContext.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/crvkCore.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/crvkDevice.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/crvkException.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/crvkFence.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/crvkPipeline.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/crvkSemaphore.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/crvkSwapchain.hpp
     )
 
 add_library( crvkLib STATIC ${CRVK_SOURCES} )
 target_include_directories( crvkLib  PRIVATE ${CMAKE_SOURCE_DIR} )
-target_precompile_headers( crvkLib PUBLIC "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/crvkPrecompiled.hpp>" )
+target_precompile_headers( crvkLib PUBLIC "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/source/crvkPrecompiled.hpp>" )
