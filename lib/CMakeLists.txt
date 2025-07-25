@@ -32,6 +32,7 @@ set( CRVK_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkSwapchain.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkPrecompiled.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkPointer.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkShaderStage.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkDynamicVector.hpp
     
     ${CMAKE_CURRENT_SOURCE_DIR}/include/crvkBuffer.hpp
@@ -43,6 +44,7 @@ set( CRVK_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/include/crvkFence.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/include/crvkPipeline.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/include/crvkSemaphore.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/crvkShaderStage.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/include/crvkSwapchain.hpp
     )
 
