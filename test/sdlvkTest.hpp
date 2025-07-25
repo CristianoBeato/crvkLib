@@ -25,15 +25,18 @@ public:
     void    Run( void );
 
 private:
-    SDL_Window*     m_window;
-    crvkContext*    m_context;
-    crvkDevice*     m_device;
-    crvkSwapchain*  m_swapchain;
-    crvkBuffer*     m_vertexBuffer;
-    crvkBuffer*     m_elementBuffer;
+    SDL_Window*             m_window;
+    crvkContext*            m_context;
+    crvkDevice*             m_device;
+    crvkSwapchain*          m_swapchain;
+    crvkPipelineCommand*    m_pipeline;
+    crvkBuffer*             m_vertexBuffer;
+    crvkBuffer*             m_elementBuffer;
 
     void    InitSDL( void );
     void    InitVulkan( void );
+    void    InitShaders( void );
+    void    InitPipeline( void );   
     void    FinishSDL( void );
     void    FinishVulkan( void );
     void    RunLoop( void );

@@ -17,6 +17,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <fstream>
 #include <stdexcept>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
@@ -164,6 +165,118 @@ void crvkTest::InitVulkan(void)
     m_vertexBuffer->SubData( m_device, 0, sizeof( crVertex ) * 4 );
 }
 
+void crvkTest::InitShaders( void )
+{
+}
+
+/*
+static crvkShaderStage* CreateShader( , const char* in_srcPath, const crvkDevice* in_device )
+{
+    std::ifstream file( in_srcPath, std::ios::ate );
+
+    crvkShaderStage* vertexShader = nullptr;
+    
+    if (!file.is_open()) 
+        throw std::runtime_error("failed to open file!");
+    
+    size_t fileSize = (size_t) file.tellg();
+    vertexShader = new crvkShaderStage();
+
+    const char* src = static_cast<const char*>( SDL_malloc( fileSize ) );
+    
+    // read source content 
+    file.seekg(0);
+    file.read( const_cast<char*>( src ), fileSize );
+    file.close();
+
+    // 
+    vertexShader->Create( in_device, 1, &src,  );
+}
+*/
+
+void crvkTest::InitPipeline(void)
+{
+    size_t fileSize = 0;
+    std::ifstream sourceFile;
+    const char* shaderSource = nullptr;
+    crvkShaderStage* vertexShader = nullptr;
+    crvkShaderStage* fragmentShader = nullptr;
+    
+#if 1 // USE GLSL sources
+
+    // Open and compile vertx shader  
+    sourceFile.open( "shaders/test_shader.vert" );
+
+    if (!sourceFile.is_open() ) 
+        throw std::runtime_error("failed to open file!");
+    
+    fileSize = (size_t) sourceFile.tellg();
+    
+    shaderSource = static_cast<const char*>( SDL_malloc( fileSize ) );
+    
+    // read source content 
+    sourceFile.seekg(0);
+    sourceFile.read( const_cast<char*>( shaderSource ), fileSize );
+    sourceFile.close();
+    
+    vertexShader = new crvkShaderStage();
+    if( !vertexShader->Create( m_device, 1, &shaderSource, VK_SHADER_STAGE_VERTEX_BIT ) )
+    {
+        SDL_free( const_cast<char*>( shaderSource ) );
+        return; // todo: do a throw
+    }
+
+    // release shader source
+    SDL_free( const_cast<char*>( shaderSource ) );
+    
+    // Open and compile vertx shader  
+    sourceFile.open( "shaders/test_shader.frag" );
+
+    if (!sourceFile.is_open() ) 
+        throw std::runtime_error("failed to open file!");
+    
+    fileSize = (size_t) sourceFile.tellg();
+    
+    shaderSource = static_cast<const char*>( SDL_malloc( fileSize ) );
+    
+    // read source content 
+    sourceFile.seekg(0);
+    sourceFile.read( const_cast<char*>( shaderSource ), fileSize );
+    sourceFile.close();
+    
+    fragmentShader = new crvkShaderStage();
+    if( !fragmentShader->Create( m_device, 1, &shaderSource, VK_SHADER_STAGE_FRAGMENT_BIT ) )
+    {
+        SDL_free( const_cast<char*>( shaderSource ) );
+        return; // todo: do a throw
+    }
+
+    SDL_free( const_cast<char*>( shaderSource ) );
+
+    
+#else // USE DIRECT SPIR-V intermediate representation
+
+#endif
+
+//    VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
+//    vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+//    vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+//    vertShaderStageInfo.module = vertShaderModule;
+//    vertShaderStageInfo.pName = "main";
+
+//    VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
+//    fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+//    fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+//    fragShaderStageInfo.module = fragShaderModule;
+//    fragShaderStageInfo.pName = "main";
+
+    m_pipeline = new crvkPipelineCommand();
+    //m_pipeline->Create( m_device, m_swapchain->FrameCount(), 0,  );
+
+    delete fragmentShader;
+    delete vertexShader;
+}
+
 void crvkTest::FinishSDL(void)
 {
     // destroy window
@@ -192,6 +305,13 @@ void crvkTest::FinishVulkan(void)
         delete m_elementBuffer;
         m_elementBuffer = nullptr;
     }
+
+    if ( m_pipeline != nullptr )
+    {
+        delete m_pipeline;
+        m_pipeline = nullptr;
+    }
+    
     
     if( m_swapchain != nullptr )
     {
