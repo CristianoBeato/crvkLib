@@ -22,30 +22,51 @@
 #include "crvkPrecompiled.hpp"
 #include "crvkPipeline.hpp"
 
+
 /*
 ==============================================
-crvkPipeline::crvkPipeline
+crvkGraphicPipeline::crvkGraphicPipeline
 ==============================================
 */
-crvkPipeline::crvkPipeline( void )
+crvkGraphicPipeline::crvkGraphicPipeline( void )
+{
+}
+
+
+/*
+==============================================
+crvkGraphicPipeline::crvkGraphicPipeline
+==============================================
+*/
+crvkGraphicPipeline::~crvkGraphicPipeline( void )
+{
+}
+
+
+/*
+==============================================
+crvkPipelineCommand::crvkPipelineCommand
+==============================================
+*/
+crvkPipelineCommand::crvkPipelineCommand( void )
 {
 }
 
 /*
 ==============================================
-crvkPipeline::crvkPipeline
+crvkPipelineCommand::crvkPipelineCommand
 ==============================================
 */
-crvkPipeline::~crvkPipeline( void )
+crvkPipelineCommand::~crvkPipelineCommand( void )
 {
 }
 
 /*
 ==============================================
-crvkPipeline::crvkPipeline
+crvkPipelineCommand::crvkPipelineCommand
 ==============================================
 */
-bool crvkPipeline::Create( 
+bool crvkPipelineCommand::Create( 
         const crvkDevice* in_device, 
         const uint32_t in_frames, 
         const uint32_t in_subpass,
@@ -83,7 +104,7 @@ bool crvkPipeline::Create(
     auto result = vkCreatePipelineLayout( m_device, &pipelineLayoutCI, k_allocationCallbacks, &m_pipelineLayout ); 
     if( result != VK_SUCCESS) 
     {
-        crvkAppendError( "crvkPipeline::Create::vkCreatePipelineLayout", result );
+        crvkAppendError( "crvkPipelineCommand::Create::vkCreatePipelineLayout", result );
         return false;
     }
 
@@ -108,7 +129,7 @@ bool crvkPipeline::Create(
     result = vkCreateGraphicsPipelines( m_device, VK_NULL_HANDLE, 1, &pipelineInfo, k_allocationCallbacks, &m_graphicsPipeline ); 
     if ( result != VK_SUCCESS ) 
     {
-        crvkAppendError( "crvkPipeline::Create::vkCreateGraphicsPipelines", result );
+        crvkAppendError( "crvkPipelineCommand::Create::vkCreateGraphicsPipelines", result );
         return false;
     }
 
@@ -126,7 +147,7 @@ bool crvkPipeline::Create(
     if ( result != VK_SUCCESS ) 
     {   
         
-        crvkAppendError( "crvkPipeline::Create::vkAllocateCommandBuffers", result );
+        crvkAppendError( "crvkPipelineCommand::Create::vkAllocateCommandBuffers", result );
         return false;
     }
 
@@ -135,10 +156,10 @@ bool crvkPipeline::Create(
 
 /*
 ==============================================
-crvkPipeline::Destroy
+crvkPipelineCommand::Destroy
 ==============================================
 */
-void crvkPipeline::Destroy( void )
+void crvkPipelineCommand::Destroy( void )
 {
     // release the command buffers 
     vkFreeCommandBuffers( m_device, m_commandPool, m_commandBuffers.Count(), &m_commandBuffers );
@@ -160,7 +181,7 @@ void crvkPipeline::Destroy( void )
     m_commandPool = nullptr;
 }
 
-VkResult crvkPipeline::Begin( const uint32_t in_frame, const VkRenderPass in_renderPass, const VkFramebuffer in_frameBuffer )
+VkResult crvkPipelineCommand::Begin( const uint32_t in_frame, const VkRenderPass in_renderPass, const VkFramebuffer in_frameBuffer )
 {
     m_frame = in_frame;
     VkResult result = VK_SUCCESS;
@@ -193,7 +214,7 @@ VkResult crvkPipeline::Begin( const uint32_t in_frame, const VkRenderPass in_ren
     return VK_SUCCESS;
 }
 
-VkResult crvkPipeline::End( void )
+VkResult crvkPipelineCommand::End( void )
 {
     // finish registe commands 
     vkCmdEndRenderPass( m_commandBuffers[m_frame] );

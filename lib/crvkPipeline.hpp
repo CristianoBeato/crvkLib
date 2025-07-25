@@ -22,11 +22,31 @@
 #ifndef __CRVK_PIPELINE_HPP__
 #define __CRVK_PIPELINE_HPP__
 
-class crvkPipeline
+class crvkGraphicPipeline
 {
 public:
-    crvkPipeline( void );
-    ~crvkPipeline( void );
+    crvkGraphicPipeline( void );
+    ~crvkGraphicPipeline( void );
+
+    bool    Create( void );
+    void    Destroy( void );
+
+    VkPipeline  Pipeline( void ) const { return m_pipeline; }
+    
+private:
+    VkDevice                            m_device;
+    VkPipelineLayout                    m_pipelineLayout;
+    VkPipeline                          m_pipeline;
+};
+
+///
+/// @brief crvkPipelineCommand, This is a complete pipeline whit his onw command buffer,
+/// for easy pipeline execution setup  
+class crvkPipelineCommand
+{
+public:
+    crvkPipelineCommand( void );
+    ~crvkPipelineCommand( void );
 
     /// @brief Create the pipeline and comand record buffer 
     /// @param in_device 
