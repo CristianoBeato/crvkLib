@@ -128,7 +128,7 @@ void crvkCommandBuffer::SetDepthBias( const float in_depthBiasConstantFactor, co
 crvkCommandBuffer::SetBlendConstants
 ==============================================
 */
-void crvkCommandBuffer::SetBlendConstants(const float in_blendConstants[4])
+void crvkCommandBuffer::SetBlendConstants(const float in_blendConstants[4]) const
 {
     vkCmdSetBlendConstants( m_commandBuffer, in_blendConstants );
 }
@@ -138,7 +138,7 @@ void crvkCommandBuffer::SetBlendConstants(const float in_blendConstants[4])
 crvkCommandBuffer::SetBlendConstants
 ==============================================
 */
-void crvkCommandBuffer::SetDepthBounds( const float in_minDepthBounds, const float in_maxDepthBounds )
+void crvkCommandBuffer::SetDepthBounds( const float in_minDepthBounds, const float in_maxDepthBounds ) const
 {
     vkCmdSetDepthBounds( m_commandBuffer, in_minDepthBounds, in_maxDepthBounds );
 }
@@ -148,7 +148,7 @@ void crvkCommandBuffer::SetDepthBounds( const float in_minDepthBounds, const flo
 crvkCommandBuffer::SetStencilCompareMask
 ==============================================
 */
-void crvkCommandBuffer::SetStencilCompareMask( const VkStencilFaceFlags in_faceMask, const uint32_t in_compareMask )
+void crvkCommandBuffer::SetStencilCompareMask( const VkStencilFaceFlags in_faceMask, const uint32_t in_compareMask ) const
 {
     vkCmdSetStencilCompareMask( m_commandBuffer, in_faceMask, in_compareMask );
 }
@@ -158,7 +158,7 @@ void crvkCommandBuffer::SetStencilCompareMask( const VkStencilFaceFlags in_faceM
 crvkCommandBuffer::SetStencilWriteMask
 ==============================================
 */
-void crvkCommandBuffer::SetStencilWriteMask( const VkStencilFaceFlags in_faceMask, const uint32_t in_writeMask )
+void crvkCommandBuffer::SetStencilWriteMask( const VkStencilFaceFlags in_faceMask, const uint32_t in_writeMask ) const
 {
     vkCmdSetStencilWriteMask( m_commandBuffer, in_faceMask, in_writeMask );
 }
@@ -168,7 +168,7 @@ void crvkCommandBuffer::SetStencilWriteMask( const VkStencilFaceFlags in_faceMas
 crvkCommandBuffer::SetStencilReference
 ==============================================
 */
-void crvkCommandBuffer::SetStencilReference( const VkStencilFaceFlags in_faceMask, const uint32_t in_reference )
+void crvkCommandBuffer::SetStencilReference( const VkStencilFaceFlags in_faceMask, const uint32_t in_reference ) const
 {
     vkCmdSetStencilReference( m_commandBuffer, in_faceMask, in_reference );
 }
@@ -194,7 +194,7 @@ void crvkCommandBuffer::BindDescriptorSets( const VkPipelineBindPoint in_pipelin
 crvkCommandBuffer::BindIndexBuffer
 ==============================================
 */
-void crvkCommandBuffer::BindIndexBuffer( const VkBuffer in_buffer, const VkDeviceSize in_offset, const VkIndexType in_indexType )
+void crvkCommandBuffer::BindIndexBuffer( const VkBuffer in_buffer, const VkDeviceSize in_offset, const VkIndexType in_indexType ) const
 {
     vkCmdBindIndexBuffer( m_commandBuffer, in_buffer, in_offset, in_indexType );
 }
@@ -210,7 +210,7 @@ void crvkCommandBuffer::BindVertexBuffers(  const uint32_t in_firstBinding,
                                             const VkDeviceSize *in_offsets, 
                                             const VkDeviceSize* in_sizes,
                                             const VkDeviceSize* in_strides
-                                        )
+                                        ) const
 {
 
 
@@ -225,7 +225,7 @@ crvkCommandBuffer::Draw
 void crvkCommandBuffer::Draw(   const uint32_t in_vertexCount, 
                                 const uint32_t in_instanceCount, 
                                 const uint32_t in_firstVertex, 
-                                const uint32_t in_firstInstance)
+                                const uint32_t in_firstInstance ) const
 {
     vkCmdDraw( m_commandBuffer, in_vertexCount, in_instanceCount, in_firstVertex, in_firstInstance );
 }
@@ -235,7 +235,11 @@ void crvkCommandBuffer::Draw(   const uint32_t in_vertexCount,
 crvkCommandBuffer::DrawIndexed
 ==============================================
 */
-void crvkCommandBuffer::DrawIndexed( const uint32_t in_indexCount, const uint32_t in_instanceCount, const uint32_t in_firstIndex, const int32_t in_vertexOffset, const uint32_t in_firstInstance)
+void crvkCommandBuffer::DrawIndexed( const uint32_t in_indexCount, 
+                                     const uint32_t in_instanceCount, 
+                                     const uint32_t in_firstIndex, 
+                                     const int32_t in_vertexOffset, 
+                                     const uint32_t in_firstInstance ) const
 {
     vkCmdDrawIndexed( m_commandBuffer, in_indexCount, in_instanceCount, in_firstIndex, in_vertexOffset, in_firstInstance );
 }
@@ -245,8 +249,12 @@ void crvkCommandBuffer::DrawIndexed( const uint32_t in_indexCount, const uint32_
 crvkCommandBuffer::DrawIndirect
 ==============================================
 */
-void crvkCommandBuffer::DrawIndirect( const VkBuffer in_buffer, const VkDeviceSize in_offset, const uint32_t in_drawCount, const uint32_t in_stride)
+void crvkCommandBuffer::DrawIndirect(   const VkBuffer in_buffer, 
+                                        const VkDeviceSize in_offset, 
+                                        const uint32_t in_drawCount, 
+                                        const uint32_t in_stride )  const
 {
+    vkCmdDrawIndirect( m_commandBuffer, in_buffer , in_offset, in_drawCount, in_stride );
 }
 
 /*
@@ -254,8 +262,12 @@ void crvkCommandBuffer::DrawIndirect( const VkBuffer in_buffer, const VkDeviceSi
 crvkCommandBuffer::DrawIndexedIndirect
 ==============================================
 */
-void crvkCommandBuffer::DrawIndexedIndirect( const VkBuffer in_buffer, const VkDeviceSize in_offset, const uint32_t in_drawCount, const uint32_t in_stride)
+void crvkCommandBuffer::DrawIndexedIndirect(    const VkBuffer in_buffer, 
+                                                const VkDeviceSize in_offset, 
+                                                const uint32_t in_drawCount, 
+                                                const uint32_t in_stride ) const
 {
+    vkCmdDrawIndexedIndirect( m_commandBuffer, in_buffer, in_offset, in_drawCount, in_stride );
 }
 
 /*
@@ -263,8 +275,11 @@ void crvkCommandBuffer::DrawIndexedIndirect( const VkBuffer in_buffer, const VkD
 crvkCommandBuffer::Dispatch
 ==============================================
 */
-void crvkCommandBuffer::Dispatch( const uint32_t in_groupCountX, const uint32_t in_groupCountY, const uint32_t in_groupCountZ)
+void crvkCommandBuffer::Dispatch(   const uint32_t in_groupCountX, 
+                                    const uint32_t in_groupCountY, 
+                                    const uint32_t in_groupCountZ ) const
 {
+    vkCmdDispatch( m_commandBuffer, in_groupCountX, in_groupCountY, in_groupCountZ );
 }
 
 /*
@@ -272,8 +287,10 @@ void crvkCommandBuffer::Dispatch( const uint32_t in_groupCountX, const uint32_t 
 crvkCommandBuffer::DispatchIndirect
 ==============================================
 */
-void crvkCommandBuffer::DispatchIndirect( const VkBuffer in_buffer, const VkDeviceSize in_offset)
+void crvkCommandBuffer::DispatchIndirect(   const VkBuffer in_buffer, 
+                                            const VkDeviceSize in_offset )  const
 {
+    vkCmdDispatchIndirect( m_commandBuffer, in_buffer, in_offset );
 }
 
 /*
@@ -281,8 +298,20 @@ void crvkCommandBuffer::DispatchIndirect( const VkBuffer in_buffer, const VkDevi
 crvkCommandBuffer::CopyBuffer
 ==============================================
 */
-void crvkCommandBuffer::CopyBuffer( const VkBuffer in_srcBuffer, const VkBuffer in_dstBuffer, const uint32_t in_regionCount, const VkBufferCopy *in_regions)
+void crvkCommandBuffer::CopyBuffer( const VkBuffer in_srcBuffer, 
+                                    const VkBuffer in_dstBuffer, 
+                                    const uint32_t in_regionCount, 
+                                    const VkBufferCopy2 *in_regions, 
+                                    const void* in_next ) const
 {
+    VkCopyBufferInfo2   copyBufferInfo{};
+    copyBufferInfo.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
+    copyBufferInfo.srcBuffer = in_srcBuffer;
+    copyBufferInfo.dstBuffer = in_dstBuffer;
+    copyBufferInfo.regionCount = in_regionCount;
+    copyBufferInfo.pRegions = in_regions;
+    copyBufferInfo.pNext = in_next;
+    vkCmdCopyBuffer2(m_commandBuffer, &copyBufferInfo );
 }
 
 /*
@@ -290,8 +319,24 @@ void crvkCommandBuffer::CopyBuffer( const VkBuffer in_srcBuffer, const VkBuffer 
 crvkCommandBuffer::CopyImage
 ==============================================
 */
-void crvkCommandBuffer::CopyImage( const VkImage in_srcImage, const VkImageLayout in_srcImageLayout, const VkImage in_dstImage, const VkImageLayout in_dstImageLayout, const uint32_t in_regionCount, const VkImageCopy *in_regions)
+void crvkCommandBuffer::CopyImage(  const VkImage in_srcImage, 
+                                    const VkImageLayout in_srcImageLayout, 
+                                    const VkImage in_dstImage, 
+                                    const VkImageLayout in_dstImageLayout, 
+                                    const uint32_t in_regionCount, 
+                                    const VkImageCopy2 *in_regions,
+                                    const void* in_next ) const
 {
+    VkCopyImageInfo2    copyImageInfo{};
+    copyImageInfo.sType = VK_STRUCTURE_TYPE_COPY_IMAGE_INFO_2;
+    copyImageInfo.srcImage = in_srcImage;
+    copyImageInfo.srcImageLayout = in_srcImageLayout;
+    copyImageInfo.dstImage = in_dstImage;
+    copyImageInfo.dstImageLayout = in_dstImageLayout;
+    copyImageInfo.regionCount = in_regionCount;
+    copyImageInfo.pRegions = in_regions;
+    copyImageInfo.pNext = in_next;
+    vkCmdCopyImage2( m_commandBuffer, &copyImageInfo );   
 }
 
 /*
@@ -299,8 +344,26 @@ void crvkCommandBuffer::CopyImage( const VkImage in_srcImage, const VkImageLayou
 crvkCommandBuffer::BlitImage
 ==============================================
 */
-void crvkCommandBuffer::BlitImage( const VkImage in_srcImage, const VkImageLayout in_srcImageLayout, const VkImage in_dstImage, const VkImageLayout in_dstImageLayout, const uint32_t in_regionCount, const VkImageBlit *in_pRegions, const VkFilter in_filter)
+void crvkCommandBuffer::BlitImage(  const VkImage in_srcImage, 
+                                    const VkImageLayout in_srcImageLayout, 
+                                    const VkImage in_dstImage, 
+                                    const VkImageLayout in_dstImageLayout, 
+                                    const uint32_t in_regionCount, 
+                                    const VkImageBlit2 *in_regions, 
+                                    const VkFilter in_filter, 
+                                    const void* in_next ) const
 {
+    VkBlitImageInfo2    blitImageInfo{};
+    blitImageInfo.sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2;
+    blitImageInfo.srcImage = in_srcImage;
+    blitImageInfo.srcImageLayout = in_srcImageLayout;
+    blitImageInfo.dstImage = in_dstImage;
+    blitImageInfo.dstImageLayout = in_dstImageLayout;
+    blitImageInfo.regionCount = in_regionCount;
+    blitImageInfo.pRegions = in_regions;
+    blitImageInfo.filter = in_filter;
+    blitImageInfo.pNext = in_next;
+    vkCmdBlitImage2( m_commandBuffer, &blitImageInfo );
 }
 
 /*
@@ -308,8 +371,22 @@ void crvkCommandBuffer::BlitImage( const VkImage in_srcImage, const VkImageLayou
 crvkCommandBuffer::CopyBufferToImage
 ==============================================
 */
-void crvkCommandBuffer::CopyBufferToImage( const VkBuffer in_srcBuffer, const VkImage in_dstImage, const VkImageLayout in_dstImageLayout, const uint32_t in_regionCount, const VkBufferImageCopy *in_regions)
+void crvkCommandBuffer::CopyBufferToImage(  const VkBuffer in_srcBuffer, 
+                                            const VkImage in_dstImage, 
+                                            const VkImageLayout in_dstImageLayout, 
+                                            const uint32_t in_regionCount, 
+                                            const VkBufferImageCopy2 *in_regions,
+                                            const void* in_next ) const
 {
+    VkCopyBufferToImageInfo2 copyBufferToImageInfo{};
+    copyBufferToImageInfo.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
+    copyBufferToImageInfo.srcBuffer = in_srcBuffer;
+    copyBufferToImageInfo.dstImage = in_dstImage;
+    copyBufferToImageInfo.dstImageLayout = in_dstImageLayout;
+    copyBufferToImageInfo.regionCount = in_regionCount;
+    copyBufferToImageInfo.pRegions = in_regions;
+    copyBufferToImageInfo.pNext = in_next;
+    vkCmdCopyBufferToImage2( m_commandBuffer, &copyBufferToImageInfo );
 }
 
 /*
@@ -322,7 +399,7 @@ void crvkCommandBuffer::CopyImageToBuffer(  const VkImage in_srcImage,
                                             const VkBuffer in_dstBuffer, 
                                             const uint32_t in_regionCount, 
                                             const VkBufferImageCopy2 *in_regions,
-                                            const void* in_next )
+                                            const void* in_next ) const
 {
     VkCopyImageToBufferInfo2 copyImageToBufferInfo{};
     copyImageToBufferInfo.sType = VK_STRUCTURE_TYPE_COPY_IMAGE_TO_BUFFER_INFO_2;
@@ -340,7 +417,10 @@ void crvkCommandBuffer::CopyImageToBuffer(  const VkImage in_srcImage,
 crvkCommandBuffer::UpdateBuffer
 ==============================================
 */
-void crvkCommandBuffer::UpdateBuffer( const VkBuffer in_dstBuffer, const VkDeviceSize in_dstOffset, const VkDeviceSize in_dataSize, const void *in_data)
+void crvkCommandBuffer::UpdateBuffer(   const VkBuffer in_dstBuffer, 
+                                        const VkDeviceSize in_dstOffset, 
+                                        const VkDeviceSize in_dataSize, 
+                                        const void *in_data ) const
 {
     vkCmdUpdateBuffer( m_commandBuffer, in_dstBuffer, in_dstOffset, in_dataSize, in_data );
 }
@@ -350,7 +430,10 @@ void crvkCommandBuffer::UpdateBuffer( const VkBuffer in_dstBuffer, const VkDevic
 crvkCommandBuffer::FillBuffer
 ==============================================
 */
-void crvkCommandBuffer::FillBuffer( const VkBuffer in_dstBuffer, const VkDeviceSize in_dstOffset, const VkDeviceSize in_size, const uint32_t in_data)
+void crvkCommandBuffer::FillBuffer( const VkBuffer in_dstBuffer, 
+                                    const VkDeviceSize in_dstOffset, 
+                                    const VkDeviceSize in_size, 
+                                    const uint32_t in_data ) const
 {
     vkCmdFillBuffer( m_commandBuffer, in_dstBuffer, in_dstOffset, in_size, in_data );
 }
@@ -360,7 +443,11 @@ void crvkCommandBuffer::FillBuffer( const VkBuffer in_dstBuffer, const VkDeviceS
 crvkCommandBuffer::ClearColorImage
 ==============================================
 */
-void crvkCommandBuffer::ClearColorImage( const VkImage in_image, const VkImageLayout in_imageLayout, const VkClearColorValue *in_color, const uint32_t in_rangeCount, const VkImageSubresourceRange *in_ranges)
+void crvkCommandBuffer::ClearColorImage( const VkImage in_image, 
+                                         const VkImageLayout in_imageLayout, 
+                                         const VkClearColorValue *in_color, 
+                                         const uint32_t in_rangeCount, 
+                                         const VkImageSubresourceRange *in_ranges ) const
 {
     vkCmdClearColorImage( m_commandBuffer, in_image, in_imageLayout, in_color, in_rangeCount, in_ranges );
 }
@@ -370,7 +457,11 @@ void crvkCommandBuffer::ClearColorImage( const VkImage in_image, const VkImageLa
 crvkCommandBuffer::ClearDepthStencilImage
 ==============================================
 */
-void crvkCommandBuffer::ClearDepthStencilImage( const VkImage in_image, const VkImageLayout in_imageLayout, const VkClearDepthStencilValue *in_depthStencil, const uint32_t in_rangeCount, const VkImageSubresourceRange *in_ranges)
+void crvkCommandBuffer::ClearDepthStencilImage( const VkImage in_image, 
+                                                const VkImageLayout in_imageLayout, 
+                                                const VkClearDepthStencilValue *in_depthStencil, 
+                                                const uint32_t in_rangeCount, 
+                                                const VkImageSubresourceRange *in_ranges ) const
 {
     vkCmdClearDepthStencilImage( m_commandBuffer, in_image, in_imageLayout, in_depthStencil, in_rangeCount, in_ranges );
 }
@@ -386,7 +477,7 @@ void crvkCommandBuffer::ResolveImage(   const VkImage in_srcImage,
                                         const VkImageLayout in_dstImageLayout,
                                         const uint32_t in_regionCount,
                                         const VkImageResolve2* in_regions, 
-                                        const void* in_next )
+                                        const void* in_next ) const
 {
     VkResolveImageInfo2 resolveImageInfo{};
     resolveImageInfo.sType = VK_STRUCTURE_TYPE_RESOLVE_IMAGE_INFO_2;
@@ -405,7 +496,7 @@ void crvkCommandBuffer::ResolveImage(   const VkImage in_srcImage,
 crvkCommandBuffer::ExecuteCommands
 ==============================================
 */
-void crvkCommandBuffer::ExecuteCommands( const uint32_t in_commandBufferCount, const VkCommandBuffer *in_commandBuffers)
+void crvkCommandBuffer::ExecuteCommands( const uint32_t in_commandBufferCount, const VkCommandBuffer *in_commandBuffers) const
 {
     vkCmdExecuteCommands( m_commandBuffer, in_commandBufferCount, in_commandBuffers );
 }
@@ -415,7 +506,10 @@ void crvkCommandBuffer::ExecuteCommands( const uint32_t in_commandBufferCount, c
 crvkCommandBuffer::ClearAttachments
 ==============================================
 */
-void crvkCommandBuffer::ClearAttachments( const uint32_t in_attachmentCount, const VkClearAttachment *in_attachments, const uint32_t in_rectCount, const VkClearRect *in_rects)
+void crvkCommandBuffer::ClearAttachments(   const uint32_t in_attachmentCount, 
+                                            const VkClearAttachment *in_attachments, 
+                                            const uint32_t in_rectCount, 
+                                            const VkClearRect *in_rects ) const
 {
     vkCmdClearAttachments( m_commandBuffer, in_attachmentCount, in_attachments, in_rectCount, in_rects );
 }
