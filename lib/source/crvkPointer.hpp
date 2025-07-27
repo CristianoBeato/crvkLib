@@ -42,6 +42,9 @@ public:
     /// @return 
     const uint32_t Count( void ) const { return m_count; }
 
+    pointer operator->( void ) { return m_data; }
+    const_pointer operator->( void ) const { return m_data; }
+
     pointer         Pointer( void ) { return m_data; } 
     const_pointer   Pointer( void ) const { return m_data; } 
 

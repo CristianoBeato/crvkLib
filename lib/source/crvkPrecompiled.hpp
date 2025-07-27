@@ -27,7 +27,7 @@
 #include <cstring> // std::memcpy, std::strcmp
 #include <stdexcept> // std::runtime_error
 #include <exception> // std::exeption
-#include <algorithm> // std::clamp
+#include <algorithm> // std::clamp, std::min, std::max
 #include <cstdio> // std::snprintf
 #include <limits> // std::numeric_limits
 #include <atomic> // std::atomic

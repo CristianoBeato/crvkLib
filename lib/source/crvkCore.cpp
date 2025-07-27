@@ -22,6 +22,7 @@
 #include "crvkPrecompiled.hpp"
 #include "crvkCore.hpp"
 
+#include <queue> // std::queue
 
  /// 
 static VKAPI_ATTR void* VKAPI_CALL crvkAllocation( void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope );

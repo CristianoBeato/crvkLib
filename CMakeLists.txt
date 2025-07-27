@@ -28,9 +28,9 @@ set( CMAKE_CXX_STANDARD 17 )
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID STREQUAL "Clang")
 
 	# memory debugging	
-	add_compile_options(-pipe)
-	add_compile_options(-fPIC)
-	add_compile_options(-Wall)
+	add_compile_options( -pipe )
+	add_compile_options( -fPIC )
+	add_compile_options( -Wall )
 	#add_compile_options( -Wunknown-pragmas )
 
 	set(CMAKE_C_FLAGS_DEBUG "-g -ggdb -D_DEBUG -O0")
