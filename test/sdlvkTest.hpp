@@ -32,6 +32,7 @@ private:
     crvkPipelineCommand*    m_pipeline;
     crvkBuffer*             m_vertexBuffer;
     crvkBuffer*             m_elementBuffer;
+    crvkProgram*            m_shaderProgram;
 
     void    InitSDL( void );
     void    InitVulkan( void );

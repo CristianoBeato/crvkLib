@@ -18,6 +18,8 @@
 find_package( SDL3 REQUIRED )
 include_directories( ${SDL3_INCLUDE_DIR} ) 
 
+# OSDependent need Threads lib 
+find_package( Threads REQUIRED )
 find_package( glslang REQUIRED )
 include_directories( ${glslang_INCLUDE_DIR} ) 
 
@@ -33,7 +35,10 @@ set( CRVKTEST_LIBRARIES
     crvkLib 
     ${SDL3_LIBRARIES} 
     ${Vulkan_LIBRARIES} 
-    ${glslang_LIBRARIES}
+    glslang::glslang
+    glslang::SPIRV
+    glslang::OSDependent
+    Threads::Threads  # Adiciona o que faltava
     )
 
 add_executable( crvkTest ${CRVKTEST_SOURCES} )

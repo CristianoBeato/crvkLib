@@ -123,7 +123,6 @@ void crvkTest::InitVulkan(void)
     // get the device list 
     devices = m_context->GetDeviceList( &deviceCount );
     
-    
     // TODO: find the best device 
     // just pic the first 
     m_device = devices[0];
@@ -163,6 +162,10 @@ void crvkTest::InitVulkan(void)
 
     // copy vertex to buffer
     m_vertexBuffer->SubData( m_device, 0, sizeof( crVertex ) * 4 );
+
+    m_shaderProgram = new crvkProgram();
+
+    InitPipeline();
 }
 
 void crvkTest::InitShaders( void )
@@ -197,63 +200,90 @@ static crvkShaderStage* CreateShader( , const char* in_srcPath, const crvkDevice
 void crvkTest::InitPipeline(void)
 {
     size_t fileSize = 0;
-    std::ifstream sourceFile;
-    const char* shaderSource = nullptr;
-    crvkShaderStage* vertexShader = nullptr;
-    crvkShaderStage* fragmentShader = nullptr;
+    FILE* sourceFile;
+    char* shaderSource = nullptr;
+    crvkShader* vertexShader = nullptr;
+    crvkShader* fragmentShader = nullptr;
     
+    // file size lambda
+    auto fSize = []( FILE* in_file )
+    {
+        size_t size = 0;
+        fseek( in_file, 0, SEEK_END ); // move to file end 
+        size = ftell( in_file ); // get the data legth 
+        fseek( in_file, 0, SEEK_SET ); // back to data start 
+        return size;
+    };
+
 #if 1 // USE GLSL sources
 
-    // Open and compile vertx shader  
-    sourceFile.open( "shaders/test_shader.vert" );
-
-    if (!sourceFile.is_open() ) 
+    // Open and compile vertx shader
+    sourceFile = fopen( "shaders/test_shader.vert", "r" );
+    if ( sourceFile == nullptr ) 
         throw std::runtime_error("failed to open file!");
     
-    fileSize = (size_t) sourceFile.tellg();
+    fileSize = fSize( sourceFile );
+   
+    shaderSource = static_cast<char*>( SDL_malloc( fileSize ) );
+    std::memset( shaderSource, 0x00, fileSize );
+
+    // read source content
+    fread( shaderSource, 1, fileSize, sourceFile ); 
+
+    // release the file 
+    fclose( sourceFile );
     
-    shaderSource = static_cast<const char*>( SDL_malloc( fileSize ) );
-    
-    // read source content 
-    sourceFile.seekg(0);
-    sourceFile.read( const_cast<char*>( shaderSource ), fileSize );
-    sourceFile.close();
-    
-    vertexShader = new crvkShaderStage();
-    if( !vertexShader->Create( m_device, 1, &shaderSource, VK_SHADER_STAGE_VERTEX_BIT ) )
+    // create vertex shader 
+    vertexShader = new crvkShader();
+    if( !vertexShader->Create( m_device, VK_SHADER_STAGE_VERTEX_BIT, shaderSource ) )
     {
-        SDL_free( const_cast<char*>( shaderSource ) );
-        return; // todo: do a throw
+        SDL_free(  shaderSource );
+        throw std::runtime_error("failed to createh the shader!");
     }
 
     // release shader source
-    SDL_free( const_cast<char*>( shaderSource ) );
+    SDL_free( shaderSource );
     
     // Open and compile vertx shader  
-    sourceFile.open( "shaders/test_shader.frag" );
+    sourceFile = fopen( "shaders/test_shader.frag", "r" );
 
-    if (!sourceFile.is_open() ) 
+    if ( sourceFile == nullptr ) 
         throw std::runtime_error("failed to open file!");
     
-    fileSize = (size_t) sourceFile.tellg();
+    fileSize = fSize( sourceFile );
     
-    shaderSource = static_cast<const char*>( SDL_malloc( fileSize ) );
+    shaderSource = static_cast<char*>( SDL_malloc( fileSize ) );
+    std::memset( shaderSource, 0x00, fileSize );
     
     // read source content 
-    sourceFile.seekg(0);
-    sourceFile.read( const_cast<char*>( shaderSource ), fileSize );
-    sourceFile.close();
+    fileSize = fSize( sourceFile );
     
-    fragmentShader = new crvkShaderStage();
-    if( !fragmentShader->Create( m_device, 1, &shaderSource, VK_SHADER_STAGE_FRAGMENT_BIT ) )
+    // create the shader 
+    fragmentShader = new crvkShader();
+    if( !fragmentShader->Create( m_device,VK_SHADER_STAGE_FRAGMENT_BIT, shaderSource ) )
     {
         SDL_free( const_cast<char*>( shaderSource ) );
-        return; // todo: do a throw
+        throw std::runtime_error("failed to createh the shader!");
     }
 
     SDL_free( const_cast<char*>( shaderSource ) );
 
+    m_shaderProgram = new crvkProgram();
+    m_shaderProgram->Create( m_device );
+    m_shaderProgram->AttachShader( vertexShader );
+    m_shaderProgram->AttachShader( fragmentShader );
+    if ( m_shaderProgram->LinkProgram() )
+    {
+        delete vertexShader;
+        delete fragmentShader;
+        throw std::runtime_error("failed to compile the shader!");
+    }
     
+    // release shaders 
+    delete vertexShader;
+    delete fragmentShader;
+
+
 #else // USE DIRECT SPIR-V intermediate representation
 
 #endif
@@ -271,7 +301,7 @@ void crvkTest::InitPipeline(void)
 //    fragShaderStageInfo.pName = "main";
 
     m_pipeline = new crvkPipelineCommand();
-    //m_pipeline->Create( m_device, m_swapchain->FrameCount(), 0,  );
+    m_pipeline->Create( m_device, m_swapchain->FrameCount(), 0,  );
 
     delete fragmentShader;
     delete vertexShader;
@@ -294,6 +324,13 @@ void crvkTest::FinishSDL(void)
 
 void crvkTest::FinishVulkan(void)
 {
+    if ( m_shaderProgram != nullptr )
+    {
+        delete m_shaderProgram;
+        m_shaderProgram = nullptr; 
+    }
+    
+
     if( m_vertexBuffer != nullptr )
     {   
         delete m_vertexBuffer;
