@@ -39,6 +39,7 @@ crvkFence::~crvkFence
 */
 crvkFence::~crvkFence( void )
 {
+    Destroy();
 }
 
 /*
@@ -50,7 +51,8 @@ void crvkFence::Create( const crvkDevice *in_device, const VkFenceCreateFlags in
 {
     VkFenceCreateInfo fenceCI{};
     fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-    fenceCI.flags = in_flags; 
+    fenceCI.flags = in_flags;
+    vkCreateFence( m_device->Device(), &fenceCI, k_allocationCallbacks, &m_fence ); 
 }
 
 /*

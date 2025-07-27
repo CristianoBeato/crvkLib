@@ -19,146 +19,274 @@
 ===============================================================================================
 */
 
-#include <glslang/Public/ShaderLang.h>
-#include <glslang/SPIRV/GlslangToSpv.h>
-#include <glslang/Public/ResourceLimits.h> // define DefaultTBuiltInResource
+//#include <vector>
+//#include <glslang/Public/ShaderLang.h>
+//#include <glslang/SPIRV/GlslangToSpv.h>
+
+#include <glslang/Include/glslang_c_shader_types.h>
+#include <glslang/Include/glslang_c_interface.h>
+#include <glslang/Public/resource_limits_c.h>
 
 #include "crvkPrecompiled.hpp"
 #include "crvkShaderStage.hpp"
 
-crvkShaderStage::crvkShaderStage( void ) : m_shaderModule( nullptr )
+static const char* k_GLSL_SHADER_ENTRY_POINT = "main";
+
+static const glslang_stage_t VulkanStageToGlslangStage( const VkShaderStageFlagBits in_stage )
 {
-    std::memset( &m_pipelineShaderStageCreateInfo, 0x00, sizeof( VkPipelineShaderStageCreateInfo ) );
+    glslang_stage_t stage = GLSLANG_STAGE_VERTEX;
+    switch ( in_stage )
+    {
+    case VK_SHADER_STAGE_VERTEX_BIT:
+        stage = GLSLANG_STAGE_VERTEX;
+        break;
+    case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
+        stage = GLSLANG_STAGE_TESSCONTROL;
+        break;
+    case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
+        stage = GLSLANG_STAGE_TESSEVALUATION;
+        break;
+    case VK_SHADER_STAGE_GEOMETRY_BIT:
+        stage = GLSLANG_STAGE_GEOMETRY;
+        break;
+    case VK_SHADER_STAGE_FRAGMENT_BIT:
+        stage = GLSLANG_STAGE_FRAGMENT;
+        break;
+    case VK_SHADER_STAGE_COMPUTE_BIT:
+        stage = GLSLANG_STAGE_COMPUTE;
+        break;
+    case VK_SHADER_STAGE_RAYGEN_BIT_KHR:
+        stage = GLSLANG_STAGE_RAYGEN;
+        break;
+    case VK_SHADER_STAGE_ANY_HIT_BIT_KHR:
+        stage = GLSLANG_STAGE_ANYHIT;
+        break;
+    case VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR:
+        stage = GLSLANG_STAGE_CLOSESTHIT;
+        break;
+    case VK_SHADER_STAGE_MISS_BIT_KHR:
+        stage = GLSLANG_STAGE_MISS;
+        break;
+    case VK_SHADER_STAGE_INTERSECTION_BIT_KHR:
+        stage = GLSLANG_STAGE_INTERSECT;
+        break;
+    case VK_SHADER_STAGE_CALLABLE_BIT_KHR:
+        stage = GLSLANG_STAGE_CALLABLE;
+        break;
+    case VK_SHADER_STAGE_TASK_BIT_EXT:
+        stage = GLSLANG_STAGE_TASK;
+        break;
+    case VK_SHADER_STAGE_MESH_BIT_EXT:
+        stage = GLSLANG_STAGE_MESH;
+        break;
+    default:    // TODO: call a error 
+        throw std::runtime_error( "Invalid, or unsuported shader stage!" );
+    }
+
+    return stage;
 }
 
-crvkShaderStage::~crvkShaderStage( void )
+crvkShader::crvkShader( void ) : m_shdhnd( nullptr )
+{
+}
+
+crvkShader::~crvkShader(void)
 {
     Destroy();
 }
 
-bool crvkShaderStage::Create(const crvkDevice *in_devie, const uint32_t in_sourceCount, const char* const* in_sources, const VkShaderStageFlagBits in_shaderStageFlagBits, const void *in_next)
+bool crvkShader::Create( const crvkDevice *in_device, const VkShaderStageFlagBits in_stage, const char * in_sources )
 {
-    EShLanguage shaderStage;
-    glslang::TProgram program;
-    std::vector<uint32_t> spirvSource;
-
-    switch ( in_shaderStageFlagBits )
-    {
-    case VK_SHADER_STAGE_VERTEX_BIT:
-        shaderStage = EShLangVertex; 
-        break;
-
-    case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
-        shaderStage = EShLangTessControl;
-        break;
-
-    case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
-        shaderStage = EShLangTessEvaluation;
-        break;
-
-    case VK_SHADER_STAGE_GEOMETRY_BIT:
-        shaderStage = EShLangGeometry;
-        break;
-
-    case VK_SHADER_STAGE_FRAGMENT_BIT:
-        shaderStage = EShLangFragment;
-        break;
-
-    case VK_SHADER_STAGE_COMPUTE_BIT:
-        shaderStage = EShLangCompute;
-        break;
-
-    case VK_SHADER_STAGE_RAYGEN_BIT_KHR:
-        shaderStage = EShLangRayGen;
-        break;
-    case VK_SHADER_STAGE_MESH_BIT_EXT:
-        shaderStage = EShLangMesh;    
-        break;
-
-    default:    // TODO: call a error 
-        return false;
-    }
-
-    glslang::TShader shader( shaderStage ); // shaderStage is a glslang::EShLanguage enum
-    shader.setStrings( in_sources, in_sourceCount );
-    shader.setEnvInput(glslang::EShSourceGlsl, shaderStage, glslang::EShClientVulkan, 450 );
-    shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_2);
-    shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_5);
+    m_stage = in_stage;
+    m_device = const_cast<crvkDevice*>( in_device );
+    m_shaderCI.Alloc( 1 );
+    m_shaderCI->language = GLSLANG_SOURCE_GLSL;
+    m_shaderCI->client = GLSLANG_CLIENT_VULKAN; 
+    m_shaderCI->client_version = GLSLANG_TARGET_VULKAN_1_3;
+    m_shaderCI->target_language = GLSLANG_TARGET_SPV;
+    m_shaderCI->target_language_version = GLSLANG_TARGET_SPV_1_6;
+    m_shaderCI->messages = GLSLANG_MSG_DEFAULT_BIT;
+    m_shaderCI->default_profile = GLSLANG_NO_PROFILE;
+    m_shaderCI->resource = m_device->BuiltInShaderResource();
+    m_shaderCI->default_version = 450; // GLSL 4.5
+    m_shaderCI->force_default_version_and_profile = false;
+    m_shaderCI->forward_compatible = false;
+    m_shaderCI->code = in_sources;
+    m_shaderCI->stage = VulkanStageToGlslangStage( in_stage );
     
-    // todo configure using vulkan properties 
-    // TBuiltInResource defaultTBuiltInResource{};
-
-    // DefaultTBuiltInResource is a struct containing limits and capabilities
-    // 100 is the default GLSL version (e.g., 450 for Vulkan)
-    // false for no forward-compatible flag
-    // EShMsgDefault for default messages
-    if( !shader.parse( GetDefaultResources(), 450, false, EShMsgVulkanRules ) )     
+    m_shdhnd = glslang_shader_create( &m_shaderCI );
+    if ( !m_shdhnd )
     {
         return false;
     }
-
-    program.addShader( &shader );
-    if( !program.link( EShMessages::EShMsgDefault ) )
+    
+    if ( !glslang_shader_preprocess( m_shdhnd, &m_shaderCI ) )	
     {
-        crvkAppendError( program.getInfoLog(), VK_ERROR_INITIALIZATION_FAILED );
+        printf("%s\n", glslang_shader_get_info_log( m_shdhnd ) );
+        printf("%s\n", glslang_shader_get_info_debug_log( m_shdhnd ) );
+        //printf("%s\n", input.code);
         return false;
     }
 
-    glslang::GlslangToSpv( *program.getIntermediate(shaderStage), spirvSource );
-
-    // create the shader module
-    VkShaderModuleCreateInfo shaderModuleCI{};
-    shaderModuleCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderModuleCI.codeSize = spirvSource.size();
-    shaderModuleCI.pCode = spirvSource.data();
-    shaderModuleCI.pNext = in_next;
-    auto result = vkCreateShaderModule( in_devie->Device(), &shaderModuleCI, nullptr, &m_shaderModule ); 
-    if ( result != VK_SUCCESS ) 
-    {    
-        crvkAppendError( "crvkShaderStage::Create::vkCreateShaderModule", VK_ERROR_UNKNOWN );
+    if ( !glslang_shader_parse( m_shdhnd, &m_shaderCI)) 
+    {
+        printf( "%s\n", glslang_shader_get_info_log( m_shdhnd ) );
+        printf( "%s\n", glslang_shader_get_info_debug_log( m_shdhnd ) );
+        printf( "%s\n", glslang_shader_get_preprocessed_code( m_shdhnd ) );
         return false;
     }
-
-    m_pipelineShaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    m_pipelineShaderStageCreateInfo.stage = in_shaderStageFlagBits;
-    m_pipelineShaderStageCreateInfo.module = m_shaderModule;
-    m_pipelineShaderStageCreateInfo.pName = "main"; // glsl use defaut main entry
 
     return true;
 }
 
-bool crvkShaderStage::Create( const crvkDevice* in_devie, const size_t in_codeSize, const uint32_t* in_code, const char* in_entry, const VkShaderStageFlagBits in_shaderStageFlagBits, const void* in_next )
+void crvkShader::Destroy( void )
 {
-    // create the shader module
-    VkShaderModuleCreateInfo shaderModuleCI{};
-    shaderModuleCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shaderModuleCI.codeSize = in_codeSize;
-    shaderModuleCI.pCode = in_code;
-    shaderModuleCI.pNext = in_next;
-    auto result = vkCreateShaderModule( in_devie->Device(), &shaderModuleCI, nullptr, &m_shaderModule ); 
-    if ( result != VK_SUCCESS ) 
-    {    
-        crvkAppendError( "crvkShaderStage::Create::vkCreateShaderModule", VK_ERROR_UNKNOWN );
-        return false;
-    }
-
-    m_pipelineShaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    m_pipelineShaderStageCreateInfo.stage = in_shaderStageFlagBits;
-    m_pipelineShaderStageCreateInfo.module = m_shaderModule;
-    m_pipelineShaderStageCreateInfo.pName = in_entry;
-
-    return true;
-}
-
-void crvkShaderStage::Destroy( void )
-{
-    if ( m_shaderModule != nullptr )
+    if ( m_shdhnd != nullptr )
     {
-        vkDestroyShaderModule( m_device, m_shaderModule, k_allocationCallbacks );
-        m_shaderModule = nullptr;
+        delete m_shdhnd;
+        m_shdhnd = nullptr;
     }
     
     m_device = nullptr;
+}
 
-    std::memset( &m_pipelineShaderStageCreateInfo, 0x00, sizeof( VkPipelineShaderStageCreateInfo ) );
+//bool crvkShaderStage::Create(const crvkDevice *in_device, const uint32_t in_sourceCount, const char* const* in_sources, const VkShaderStageFlagBits in_shaderStageFlagBits, const void *in_next)
+//{
+//    
+//    
+//    std::vector<uint32_t> spirvSource;
+//
+//    
+//
+//    
+//
+//    glslang::GlslangToSpv( *program.getIntermediate(shaderStage), spirvSource );
+//
+//    // create the shader module
+//    VkShaderModuleCreateInfo shaderModuleCI{};
+//    shaderModuleCI.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+//    shaderModuleCI.codeSize = spirvSource.size() * sizeof( uint32_t );
+//    shaderModuleCI.pCode = spirvSource.data();
+//    shaderModuleCI.pNext = in_next;
+//    auto result = vkCreateShaderModule( in_device->Device(), &shaderModuleCI, nullptr, &m_shaderModule ); 
+//    if ( result != VK_SUCCESS ) 
+//    {    
+//        crvkAppendError( "crvkShaderStage::Create::vkCreateShaderModule", result );
+//        return false;
+//    }
+//
+//    m_pipelineShaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+//    m_pipelineShaderStageCreateInfo.stage = in_shaderStageFlagBits;
+//    m_pipelineShaderStageCreateInfo.module = m_shaderModule;
+//    m_pipelineShaderStageCreateInfo.pName = k_GLSL_SHADER_ENTRY_POINT; // glsl use defaut main entry
+//
+//    return true;
+//}
+
+crvkProgram::crvkProgram(void) : 
+    m_program( nullptr ),
+    m_device( nullptr )
+{
+}
+
+crvkProgram::~crvkProgram(void)
+{
+}
+
+void crvkProgram::Create( const crvkDevice *in_device )
+{
+    // get the device 
+    m_device = in_device->Device();
+
+    // create the program handle
+    m_program = glslang_program_create();
+}
+
+void crvkProgram::Destroy( void )
+{
+    
+    for ( uint32_t i = 0; i < m_stages.Count(); i++)
+    {
+        auto stage = m_stages[i];
+        if ( stage.module == nullptr )
+            continue;
+        
+        vkDestroyShaderModule( m_device, stage.module, k_allocationCallbacks );
+        stage.module = nullptr;
+    }
+    
+    m_stages.Clear();
+}
+
+void crvkProgram::AttachShader(const crvkShader *in_shader)
+{
+    VkPipelineShaderStageCreateInfo pipelineShaderStageCI{};
+
+    // append shader stage
+    glslang_program_add_shader( m_program, in_shader->Shader() );
+
+    pipelineShaderStageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    pipelineShaderStageCI.stage = in_shader->ShaderStageFlag();
+    pipelineShaderStageCI.module = nullptr;
+    pipelineShaderStageCI.pName = k_GLSL_SHADER_ENTRY_POINT;
+
+    m_stages.Append( pipelineShaderStageCI );
+}
+
+bool crvkProgram::LinkProgram(void)
+{
+    if ( !glslang_program_link( m_program, GLSLANG_MSG_SPV_RULES_BIT | GLSLANG_MSG_VULKAN_RULES_BIT ) ) 
+    {
+        printf("%s\n", glslang_program_get_info_log( m_program ));
+        printf("%s\n", glslang_program_get_info_debug_log( m_program ));
+        return false;
+    }
+
+
+    for ( uint32_t i = 0; i < m_stages.Count(); i++)
+    {
+        // aquire spirV shader source
+        glslang_spv_options_t spvOptions{};        
+        spvOptions.disable_optimizer = false;
+        spvOptions.optimize_size = true;
+        spvOptions.disassemble = false;
+
+#if defined( NDEBUG )
+        spvOptions.strip_debug_info = true;
+        spvOptions.generate_debug_info = false;
+        spvOptions.validate = false;
+        spvOptions.emit_nonsemantic_shader_debug_info = false;
+        spvOptions.emit_nonsemantic_shader_debug_source = false;
+#else
+        spvOptions.strip_debug_info = false;
+        spvOptions.generate_debug_info = true;
+        spvOptions.validate = true;
+        spvOptions.emit_nonsemantic_shader_debug_info = true;
+        spvOptions.emit_nonsemantic_shader_debug_source = true;
+#endif
+        glslang_program_SPIRV_generate_with_options( m_program, VulkanStageToGlslangStage( m_stages[i].stage ), &spvOptions );
+
+        // create the shader module
+        VkShaderModuleCreateInfo shaderModuleCI{};
+        shaderModuleCI.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        shaderModuleCI.codeSize = glslang_program_SPIRV_get_size( m_program );
+        shaderModuleCI.pCode = static_cast<uint32_t*>( SDL_malloc( shaderModuleCI.codeSize ) );
+        shaderModuleCI.pNext = nullptr;
+
+        auto result = vkCreateShaderModule( m_device, &shaderModuleCI, k_allocationCallbacks, &m_stages[i].module ); 
+        if ( result != VK_SUCCESS ) 
+        {    
+            crvkAppendError( "crvkShaderStage::Create::vkCreateShaderModule", VK_ERROR_UNKNOWN );
+            return false;
+        }
+
+        SDL_free( const_cast<uint32_t*>( shaderModuleCI.pCode ) ); // release source
+    }
+    
+    return false;
+}
+
+const VkPipelineShaderStageCreateInfo *crvkProgram::PipelineShaderStages(void) const
+{
+    return m_stages.Pointer();
 }

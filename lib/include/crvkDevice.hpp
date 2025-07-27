@@ -100,6 +100,7 @@ private:
     crvkDeviceQueue operator=( const crvkDeviceQueue & ) = delete;
 };
 
+typedef struct glslang_resource_s glslang_resource_t;
 class crvkDevice
 {
 public:
@@ -119,6 +120,7 @@ public:
     VkSurfaceFormatKHR          FindSurfaceFormat( const VkFormat in_format, const VkColorSpaceKHR in_colorSpace ) const;
     uint32_t                    FindMemoryType( uint32_t typeFilter, VkMemoryPropertyFlags properties ) const;
     const bool                  CheckExtensionSupport( const char* in_extension );
+    const glslang_resource_t*   BuiltInShaderResource( void ) const;     
 
 protected:
     friend class crvkContext;
@@ -132,31 +134,32 @@ protected:
     const bool TimelineSemaphoreAvailable( void ) const { return m_featuresv12.timelineSemaphore; }
 
 private:
-    crvkDeviceSuportedFeatures_t                m_deviceSuportedFeatures;
-#ifdef VK_VERSION_1_2
-    VkPhysicalDeviceProperties2                 m_properties;
-    VkPhysicalDeviceFeatures2                   m_features;
-    VkPhysicalDeviceVulkan12Features            m_featuresv12;
-    VkPhysicalDeviceVulkan13Features            m_featuresv13;
-    VkSurfaceCapabilities2KHR                   m_surfaceCapabilities;
-    VkPhysicalDeviceMemoryProperties2           m_memoryProperties;
-    crvkDynamicVector<VkSurfaceFormat2KHR>      m_surfaceFormats;
-#else
-    VkPhysicalDeviceProperties                  m_properties;
-    VkPhysicalDeviceFeatures                    m_features;
-    VkSurfaceCapabilitiesKHR                    m_surfaceCapabilities;
-    VkPhysicalDeviceMemoryProperties            m_memoryProperties;
-    crvkPointer<VkSurfaceFormatKHR>             m_surfaceFormats;
-#endif // VK_VERSION_1_2
-    VkPhysicalDevice                            m_physicalDevice;
-    VkDevice                                    m_logicalDevice;
-    crvkContext*                                m_context;
-    crvkDynamicVector<VkExtensionProperties>    m_availableExtensions;
-    crvkDynamicVector<VkPresentModeKHR>         m_presentModes;
-    crvkDynamicVector<VkQueueFamilyProperties>  m_queueFamilies;
-    crvkDeviceQueue*                            m_queues[4];
+    crvkDeviceSuportedFeatures_t                    m_deviceSuportedFeatures;
+    VkPhysicalDeviceProperties2                     m_propertiesv10;
+    VkPhysicalDeviceVulkan11Properties              m_propertiesv11;
+    VkPhysicalDeviceVulkan12Properties              m_propertiesv12;
+    VkPhysicalDeviceVulkan13Properties              m_propertiesv13;
+    VkPhysicalDeviceTransformFeedbackPropertiesEXT  m_propertiesTransformFeedback;
+    VkPhysicalDeviceFeatures2                       m_featuresv10;
+    VkPhysicalDeviceVulkan12Features                m_featuresv11;
+    VkPhysicalDeviceVulkan12Features                m_featuresv12;
+    VkPhysicalDeviceVulkan13Features                m_featuresv13;
+    VkPhysicalDeviceTransformFeedbackFeaturesEXT    m_featuresTransformFeedback;
+    VkSurfaceCapabilities2KHR                       m_surfaceCapabilities;
+    VkPhysicalDeviceMemoryProperties2               m_memoryProperties;
+    crvkDynamicVector<VkSurfaceFormat2KHR>          m_surfaceFormats;
+    VkPhysicalDevice                                m_physicalDevice;
+    VkDevice                                        m_logicalDevice;
+    crvkPointer<glslang_resource_t>                 m_shaderBuiltInResource;
+    crvkContext*                                    m_context;
+    crvkDynamicVector<VkExtensionProperties>        m_availableExtensions;
+    crvkDynamicVector<VkPresentModeKHR>             m_presentModes;
+    crvkDynamicVector<VkQueueFamilyProperties>      m_queueFamilies;
+    crvkDeviceQueue*                                m_queues[4];
 
     void    FindQueues( crvkDynamicVector<VkDeviceQueueCreateInfo> &queueCreateInfos );
+
+    void    InitializeBuiltInShaderResources( void );
 
     // delete refernce 
     crvkDevice( const crvkDevice & ) = delete;

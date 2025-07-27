@@ -22,46 +22,41 @@
 #ifndef __CRVK_SHADER_STAGE_HPP__
 #define __CRVK_SHADER_STAGE_HPP__
 
-class crvkShaderStage
+typedef struct glslang_shader_s glslang_shader_t;
+typedef struct glslang_program_s glslang_program_t;
+typedef struct glslang_input_s glslang_input_t;
+class crvkShader
 {
 public:
-    crvkShaderStage( void );
-    ~crvkShaderStage( void );
+    crvkShader( void );
+    ~crvkShader( void );
+    bool                            Create( const crvkDevice* in_device, const VkShaderStageFlagBits in_stage, const char * in_sources );
+    void                            Destroy( void );
+    VkShaderStageFlagBits           ShaderStageFlag( void ) const { return m_stage; }
+    glslang_shader_t*               Shader( void ) const { return m_shdhnd; }
+private:
+    VkShaderStageFlagBits           m_stage;
+    crvkDevice*                     m_device;
+    crvkPointer<glslang_input_t>    m_shaderCI;
+    glslang_shader_t*               m_shdhnd;  
+};
 
-    /// @brief Create shader based on GLSL
-    /// @param in_devie 
-    /// @param in_codeLegenth 
-    /// @param in_code 
-    /// @param in_shaderStageFlagBits 
-    /// @param in_next 
-    /// @return 
-    bool    Create( const crvkDevice* in_devie, 
-                    const uint32_t in_sourceCount, 
-                    const char* const* in_sources, 
-                    const VkShaderStageFlagBits in_shaderStageFlagBits, 
-                    const void* in_next = nullptr );
-
-    /// @brief Create shader based on SPIR-V
-    /// @param in_codeSize 
-    /// @param in_code 
-    /// @param in_entry 
-    /// @param in_shaderStageFlagBits 
-    /// @param in_next 
-    /// @return 
-    bool    Create( const crvkDevice* in_devie, 
-                    const size_t in_codeSize, 
-                    const uint32_t* in_code, 
-                    const char* in_entry, 
-                    const VkShaderStageFlagBits in_shaderStageFlagBits, 
-                    const void* in_next );
-    void    Destroy( void );
-
-    const VkPipelineShaderStageCreateInfo ShaderStage( void ) const;
+class crvkProgram
+{
+public:
+    crvkProgram( void );
+    ~crvkProgram( void );
+    void                                    Create( const crvkDevice* in_device );
+    void                                    Destroy( void );
+    void                                    AttachShader( const crvkShader* in_shader );
+    bool                                    LinkProgram( void );
+    const uint32_t                          PipelineShaderStagesCount( void ) const { return m_stages.Count(); }
+    const VkPipelineShaderStageCreateInfo*  PipelineShaderStages( void ) const; 
 
 private:
-    VkPipelineShaderStageCreateInfo m_pipelineShaderStageCreateInfo;
-    VkShaderModule                  m_shaderModule;
-    VkDevice                        m_device;
+    glslang_program_t*                                  m_program;
+    VkDevice                                            m_device;
+    crvkDynamicVector<VkPipelineShaderStageCreateInfo>  m_stages;
 };
 
 #endif //__CRVK_SHADER_STAGE_HPP__

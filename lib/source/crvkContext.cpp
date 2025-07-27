@@ -19,9 +19,8 @@
 ===============================================================================================
 */
 
-// initialize shader compiler 
-#include <glslang/Public/ShaderLang.h>
-
+// initialize shader compiler interface
+#include <glslang/Include/glslang_c_interface.h>
 #include "crvkPrecompiled.hpp"
 #include "crvkContext.hpp"
 
@@ -179,7 +178,7 @@ bool crvkContext::Create(
     }
     
     // initialize shader compiler
-    glslang::InitializeProcess();
+    glslang_initialize_process();
 
     return true;
 }
@@ -192,8 +191,8 @@ crvkContext::Destroy
 void crvkContext::Destroy(void)
 {
     // release shader compiler
-    glslang::FinalizeProcess();
-    
+    glslang_finalize_process();
+
     for ( uint32_t i = 0; i < m_devicePropertiesList.Count(); i++)
     {
         delete m_devicePropertiesList[i];

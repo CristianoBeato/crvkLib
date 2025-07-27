@@ -19,6 +19,8 @@
 ===============================================================================================
 */
 
+#include <glslang/Include/glslang_c_interface.h>
+
 #include "crvkPrecompiled.hpp"
 #include "crvkDevice.hpp"
 
@@ -214,14 +216,12 @@ bool crvkDevice::Create(const char **in_layers, const uint32_t in_layersCount, c
     deviceCI.pQueueCreateInfos = &queueCreateInfos;
     
     // configure device features
-    VkPhysicalDeviceFeatures deviceFeatures{};
-#if VK_VERSION_1_2  
-    m_featuresv13.pNext = &m_featuresv12;
-    m_features.pNext = &m_featuresv13;    
-    deviceCI.pNext = &m_features;
-#else
-    deviceCI.pEnabledFeatures = &m_deviceSuportedFeatures;
-#endif
+    // concatenate device features initialization 
+    m_featuresv13.pNext = &m_featuresTransformFeedback; // initialize transform feedback features
+    m_featuresv12.pNext = &m_featuresv13;   // initialize vulkan 1.3 device features
+    m_featuresv11.pNext = &m_featuresv12;   // initialize vulkan 1.2 device features 
+    m_featuresv10.pNext = &m_featuresv11;   // initialize vulkan 1.1 device features 
+    deviceCI.pNext = &m_featuresv10;        // initialize vulkan 1.0 device features 
 
     deviceCI.enabledExtensionCount = in_deviceExtensionsCount;
     deviceCI.ppEnabledExtensionNames = const_cast<const char* const*>( in_deviceExtensions );
@@ -462,6 +462,12 @@ const bool crvkDevice::CheckExtensionSupport( const char *in_extension )
     return found;
 }
 
+const glslang_resource_t* crvkDevice::BuiltInShaderResource( void ) const
+{
+    auto ptr = &m_shaderBuiltInResource;
+    return ptr;
+}
+
 /*
 ==============================================
 crvkDevice::InitDevice
@@ -476,10 +482,16 @@ bool crvkDevice::InitDevice( const crvkContext* in_context, const VkPhysicalDevi
     uint32_t presentModeCount = 0;
 
     // clear from memory gargbage 
-    std::memset( &m_properties, 0x00, sizeof( m_properties ) );
-    std::memset( &m_features, 0x00, sizeof( m_features ) );
+    std::memset( &m_propertiesv10, 0x00, sizeof( m_propertiesv10 ) );
+    std::memset( &m_propertiesv11, 0x00, sizeof( m_propertiesv11 ) );
+    std::memset( &m_propertiesv12, 0x00, sizeof( m_propertiesv12 ) );
+    std::memset( &m_propertiesv13, 0x00, sizeof( m_propertiesv13 ) );
+    std::memset( &m_propertiesTransformFeedback, 0x00, sizeof( m_propertiesTransformFeedback ) );
+    std::memset( &m_featuresv10, 0x00, sizeof( m_featuresv10 ) );
+    std::memset( &m_featuresv11, 0x00, sizeof( m_featuresv11 ) );
     std::memset( &m_featuresv12, 0x00, sizeof( m_featuresv12 ) );
     std::memset( &m_featuresv13, 0x00, sizeof( m_featuresv13 ) );
+    std::memset( &m_featuresTransformFeedback, 0x00, sizeof( m_featuresTransformFeedback ) );
     std::memset( &m_surfaceCapabilities, 0x00, sizeof( m_surfaceCapabilities ) );
     std::memset( &m_memoryProperties, 0x00, sizeof( m_memoryProperties ) );
 
@@ -487,30 +499,36 @@ bool crvkDevice::InitDevice( const crvkContext* in_context, const VkPhysicalDevi
     m_physicalDevice = in_device;
     SDL_assert( m_physicalDevice != nullptr );
 
-#if VK_VERSION_1_2
     VkPhysicalDeviceSurfaceInfo2KHR deviceSurfaceInfo{}; 
     deviceSurfaceInfo.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SURFACE_INFO_2_KHR;
     deviceSurfaceInfo.surface = m_context->Surface();
     deviceSurfaceInfo.pNext = nullptr;
 
     // query device properties
-    m_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
-    m_properties.pNext = nullptr;
-    vkGetPhysicalDeviceProperties2( m_physicalDevice, &m_properties );
+    m_propertiesTransformFeedback.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TRANSFORM_FEEDBACK_PROPERTIES_EXT;
+    m_propertiesTransformFeedback.pNext = nullptr;
+    m_propertiesv13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_PROPERTIES;
+    m_propertiesv13.pNext = &m_propertiesTransformFeedback;
+    m_propertiesv12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES;
+    m_propertiesv12.pNext = &m_propertiesv13;
+    m_propertiesv11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES;
+    m_propertiesv11.pNext = &m_propertiesv12;
+    m_propertiesv10.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+    m_propertiesv10.pNext = &m_propertiesv11;
+    vkGetPhysicalDeviceProperties2( m_physicalDevice, &m_propertiesv10 );
 
-    // query vulkan 1.2 features
-    m_featuresv12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
-    m_featuresv12.pNext = nullptr;
-
-    // query vulkan 1.3 features
+    // query vulkan features
+    m_featuresTransformFeedback.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TRANSFORM_FEEDBACK_FEATURES_EXT;
+    m_featuresv13.pNext = nullptr;
     m_featuresv13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
-    m_featuresv13.pNext = &m_featuresv12;
-
-    // query vulkan 1.0 features
-    m_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-    m_features.pNext = &m_featuresv13;
-    
-    vkGetPhysicalDeviceFeatures2( m_physicalDevice, &m_features );
+    m_featuresv13.pNext = &m_featuresTransformFeedback;
+    m_featuresv12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+    m_featuresv12.pNext = &m_featuresv13;
+    m_featuresv11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
+    m_featuresv11.pNext = &m_featuresv12;
+    m_featuresv10.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+    m_featuresv10.pNext = &m_featuresv11;   
+    vkGetPhysicalDeviceFeatures2( m_physicalDevice, &m_featuresv10 );
 
     // query device surface  capabilities
     m_surfaceCapabilities.sType = VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_2_KHR;
@@ -544,21 +562,6 @@ bool crvkDevice::InitDevice( const crvkContext* in_context, const VkPhysicalDevi
     m_memoryProperties.pNext = nullptr;
 
     vkGetPhysicalDeviceMemoryProperties2( m_physicalDevice, &m_memoryProperties );
-#else
-    // query device properties 
-    vkGetPhysicalDeviceProperties( m_physicalDevice, &m_properties );
-
-    // query device surface  capabilities
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR( m_physicalDevice, in_surface, &m_surfaceCapabilities );
-
-    // query device suported surface formats
-    vkGetPhysicalDeviceSurfaceFormatsKHR( m_physicalDevice, in_surface, &formatCount, nullptr );
-    m_surfaceFormats.Alloc( formatCount );
-    vkGetPhysicalDeviceSurfaceFormatsKHR( m_physicalDevice, in_surface, &formatCount, &m_surfaceFormats );
-
-    //
-    vkGetPhysicalDeviceMemoryProperties( m_physicalDevice, &m_memoryProperties);
-#endif
 
     // query device extensions
     result = vkEnumerateDeviceExtensionProperties( m_physicalDevice, nullptr, &extensionCount, nullptr );
@@ -621,6 +624,7 @@ void crvkDevice::Clear( void )
         m_logicalDevice = nullptr;
     }
 
+    m_shaderBuiltInResource.Free();
     m_surfaceFormats.Clear();
     m_availableExtensions.Clear();
     m_presentModes.Clear();
@@ -811,4 +815,134 @@ void crvkDevice::FindQueues( crvkDynamicVector<VkDeviceQueueCreateInfo> &queueCr
 
         queueCreateInfos.Append( queueCI );
     }
+
+    InitializeBuiltInShaderResources();
+}
+
+#define HAS(feature) ( feature == VK_TRUE)
+#define COMPONENTS_TO_VECTORS(x) ((x) / 4)
+
+void crvkDevice::InitializeBuiltInShaderResources(void)
+{
+    m_shaderBuiltInResource.Alloc( 1 );
+
+    auto properties10 = m_propertiesv10.properties;
+    
+    m_shaderBuiltInResource->max_lights = 32; // irrelevante no Vulkan, mas ainda exigido
+    m_shaderBuiltInResource->max_clip_planes = properties10.limits.maxClipDistances;
+    m_shaderBuiltInResource->max_clip_distances = properties10.limits.maxClipDistances;
+    m_shaderBuiltInResource->max_texture_units = properties10.limits.maxPerStageDescriptorSampledImages;
+    m_shaderBuiltInResource->max_texture_coords = properties10.limits.maxPerStageDescriptorSamplers;
+    m_shaderBuiltInResource->max_vertex_attribs = properties10.limits.maxVertexInputAttributes;
+    m_shaderBuiltInResource->max_vertex_uniform_components = COMPONENTS_TO_VECTORS( properties10.limits.maxUniformBufferRange );
+    m_shaderBuiltInResource->max_varying_floats = COMPONENTS_TO_VECTORS( properties10.limits.maxVertexOutputComponents );
+    m_shaderBuiltInResource->max_vertex_texture_image_units = properties10.limits.maxPerStageDescriptorSampledImages;
+    m_shaderBuiltInResource->max_combined_texture_image_units = properties10.limits.maxDescriptorSetSampledImages;
+    m_shaderBuiltInResource->max_texture_image_units = properties10.limits.maxPerStageDescriptorSampledImages;
+    m_shaderBuiltInResource->max_fragment_uniform_components = COMPONENTS_TO_VECTORS( properties10.limits.maxUniformBufferRange );
+    m_shaderBuiltInResource->max_draw_buffers = properties10.limits.maxColorAttachments;
+    m_shaderBuiltInResource->max_vertex_uniform_vectors = properties10.limits.maxUniformBufferRange / 16;
+    m_shaderBuiltInResource->max_fragment_uniform_vectors = properties10.limits.maxUniformBufferRange / 16;
+    m_shaderBuiltInResource->max_varying_vectors = properties10.limits.maxUniformBufferRange / 16;
+    m_shaderBuiltInResource->max_vertex_output_vectors = properties10.limits.maxUniformBufferRange / 16;
+    m_shaderBuiltInResource->max_fragment_input_vectors = properties10.limits.maxUniformBufferRange / 16;
+    m_shaderBuiltInResource->min_program_texel_offset = properties10.limits.minTexelOffset;
+    m_shaderBuiltInResource->max_program_texel_offset = properties10.limits.maxTexelOffset;
+    m_shaderBuiltInResource->max_compute_work_group_count_x = properties10.limits.maxComputeWorkGroupCount[0];
+    m_shaderBuiltInResource->max_compute_work_group_count_y = properties10.limits.maxComputeWorkGroupCount[1];
+    m_shaderBuiltInResource->max_compute_work_group_count_z = properties10.limits.maxComputeWorkGroupCount[2];
+    m_shaderBuiltInResource->max_compute_work_group_size_x = properties10.limits.maxComputeWorkGroupSize[0];
+    m_shaderBuiltInResource->max_compute_work_group_size_y = properties10.limits.maxComputeWorkGroupSize[1];
+    m_shaderBuiltInResource->max_compute_work_group_size_z = properties10.limits.maxComputeWorkGroupSize[2];
+    m_shaderBuiltInResource->max_compute_uniform_components = properties10.limits.maxUniformBufferRange / 4;
+    m_shaderBuiltInResource->max_compute_texture_image_units = properties10.limits.maxPerStageDescriptorSampledImages;
+    m_shaderBuiltInResource->max_compute_image_uniforms = properties10.limits.maxPerStageDescriptorStorageImages;
+    m_shaderBuiltInResource->max_compute_atomic_counters = 8;
+    m_shaderBuiltInResource->max_compute_atomic_counter_buffers = 1;
+    m_shaderBuiltInResource->max_varying_components = properties10.limits.maxVertexOutputComponents;
+    m_shaderBuiltInResource->max_vertex_output_components = properties10.limits.maxVertexOutputComponents;
+    m_shaderBuiltInResource->max_geometry_input_components = properties10.limits.maxGeometryInputComponents;
+    m_shaderBuiltInResource->max_geometry_output_components = properties10.limits.maxGeometryOutputComponents;
+    m_shaderBuiltInResource->max_fragment_input_components = properties10.limits.maxFragmentInputComponents;
+    m_shaderBuiltInResource->max_image_units = properties10.limits.maxPerStageDescriptorStorageImages;
+    m_shaderBuiltInResource->max_combined_image_units_and_fragment_outputs = properties10.limits.maxColorAttachments + properties10.limits.maxDescriptorSetSampledImages;
+    m_shaderBuiltInResource->max_vertex_image_uniforms = properties10.limits.maxPerStageDescriptorStorageImages;
+    m_shaderBuiltInResource->max_tess_control_image_uniforms = properties10.limits.maxPerStageDescriptorStorageImages;
+    m_shaderBuiltInResource->max_tess_evaluation_image_uniforms = properties10.limits.maxPerStageDescriptorStorageImages;
+    m_shaderBuiltInResource->max_geometry_image_uniforms = properties10.limits.maxPerStageDescriptorStorageImages;
+    m_shaderBuiltInResource->max_fragment_image_uniforms = properties10.limits.maxPerStageDescriptorStorageImages;
+    m_shaderBuiltInResource->max_combined_image_uniforms = properties10.limits.maxDescriptorSetStorageImages;
+    m_shaderBuiltInResource->max_geometry_texture_image_units = properties10.limits.maxPerStageDescriptorSampledImages;
+    m_shaderBuiltInResource->max_geometry_output_vertices = properties10.limits.maxGeometryOutputVertices;
+    m_shaderBuiltInResource->max_geometry_total_output_components = properties10.limits.maxGeometryTotalOutputComponents;
+    m_shaderBuiltInResource->max_geometry_uniform_components = properties10.limits.maxUniformBufferRange / 4;
+    m_shaderBuiltInResource->max_geometry_varying_components = properties10.limits.maxVertexOutputComponents;
+    m_shaderBuiltInResource->max_tess_control_input_components = properties10.limits.maxTessellationControlPerVertexInputComponents;
+    m_shaderBuiltInResource->max_tess_control_output_components = properties10.limits.maxTessellationControlPerVertexOutputComponents;
+    m_shaderBuiltInResource->max_tess_control_texture_image_units = properties10.limits.maxPerStageDescriptorSampledImages;
+    m_shaderBuiltInResource->max_tess_control_uniform_components = properties10.limits.maxUniformBufferRange / 4;
+    m_shaderBuiltInResource->max_tess_control_total_output_components = properties10.limits.maxTessellationControlTotalOutputComponents;
+    m_shaderBuiltInResource->max_tess_evaluation_input_components = properties10.limits.maxTessellationEvaluationInputComponents;
+    m_shaderBuiltInResource->max_tess_evaluation_output_components = properties10.limits.maxTessellationEvaluationOutputComponents;
+    m_shaderBuiltInResource->max_tess_evaluation_texture_image_units = properties10.limits.maxPerStageDescriptorSampledImages;
+    m_shaderBuiltInResource->max_tess_evaluation_uniform_components = COMPONENTS_TO_VECTORS( properties10.limits.maxUniformBufferRange );
+    m_shaderBuiltInResource->max_tess_patch_components = properties10.limits.maxTessellationPatchSize;
+    m_shaderBuiltInResource->max_patch_vertices = properties10.limits.maxTessellationPatchSize;
+    m_shaderBuiltInResource->max_tess_gen_level = properties10.limits.maxTessellationGenerationLevel;
+    m_shaderBuiltInResource->max_viewports = properties10.limits.maxViewports;
+    m_shaderBuiltInResource->max_vertex_atomic_counters = 0;
+    m_shaderBuiltInResource->max_tess_control_atomic_counters = 0;
+    m_shaderBuiltInResource->max_tess_evaluation_atomic_counters = 0;
+    m_shaderBuiltInResource->max_geometry_atomic_counters = 0;
+    m_shaderBuiltInResource->max_fragment_atomic_counters = 8;
+    m_shaderBuiltInResource->max_combined_atomic_counters = 8;
+    m_shaderBuiltInResource->max_atomic_counter_bindings = 1;
+    m_shaderBuiltInResource->max_vertex_atomic_counter_buffers = 0;
+    m_shaderBuiltInResource->max_tess_control_atomic_counter_buffers = 0;
+    m_shaderBuiltInResource->max_tess_evaluation_atomic_counter_buffers = 0;
+    m_shaderBuiltInResource->max_geometry_atomic_counter_buffers = 0;
+    m_shaderBuiltInResource->max_fragment_atomic_counter_buffers = 1;
+    m_shaderBuiltInResource->max_combined_atomic_counter_buffers = 1;
+    m_shaderBuiltInResource->max_atomic_counter_buffer_size = properties10.limits.maxStorageBufferRange;
+    m_shaderBuiltInResource->max_transform_feedback_buffers = m_propertiesTransformFeedback.maxTransformFeedbackBuffers;
+    m_shaderBuiltInResource->max_transform_feedback_interleaved_components = COMPONENTS_TO_VECTORS( m_propertiesTransformFeedback.maxTransformFeedbackBufferDataSize );
+    m_shaderBuiltInResource->max_cull_distances = properties10.limits.maxCullDistances;
+    m_shaderBuiltInResource->max_combined_clip_and_cull_distances = properties10.limits.maxCombinedClipAndCullDistances;
+    
+    m_shaderBuiltInResource->max_combined_shader_output_resources =
+    properties10.limits.maxPerStageDescriptorSamplers +
+    properties10.limits.maxPerStageDescriptorUniformBuffers +
+    properties10.limits.maxPerStageDescriptorStorageBuffers +
+    properties10.limits.maxPerStageDescriptorSampledImages +
+    properties10.limits.maxPerStageDescriptorStorageImages +
+    properties10.limits.maxPerStageDescriptorInputAttachments;
+    
+    if ( properties10.limits.framebufferColorSampleCounts & VK_SAMPLE_COUNT_64_BIT ) 
+        m_shaderBuiltInResource->max_image_samples = 64;
+    else if ( properties10.limits.framebufferColorSampleCounts & VK_SAMPLE_COUNT_32_BIT ) 
+        m_shaderBuiltInResource->max_image_samples = 32;
+    else if ( properties10.limits.framebufferColorSampleCounts & VK_SAMPLE_COUNT_16_BIT ) 
+        m_shaderBuiltInResource->max_image_samples = 16;
+    else if ( properties10.limits.framebufferColorSampleCounts & VK_SAMPLE_COUNT_8_BIT ) 
+        m_shaderBuiltInResource->max_image_samples = 8;
+    else if ( properties10.limits.framebufferColorSampleCounts & VK_SAMPLE_COUNT_4_BIT ) 
+        m_shaderBuiltInResource->max_image_samples = 4;
+    else if ( properties10.limits.framebufferColorSampleCounts & VK_SAMPLE_COUNT_2_BIT ) 
+        m_shaderBuiltInResource->max_image_samples = 2;
+
+    m_shaderBuiltInResource->max_samples = m_shaderBuiltInResource->max_image_samples;
+
+    glslang_limits_t limits;
+    limits.non_inductive_for_loops = true; // There's no way to know via Vulkan. Suppose it's true.
+    limits.while_loops = true; // No specific flag. Assumes true.
+    limits.do_while_loops = true; // No specific flag. Assumes true..
+    limits.general_attribute_matrix_vector_indexing = true; // No specific flag. Assumes true.
+    limits.general_varying_indexing = true;               // No specific flag. Assumes true.
+    limits.general_constant_matrix_vector_indexing = true;  // Assumes true, generally supported.
+
+    // Dynamic indexing — some of these are directly mappable:
+    limits.general_uniform_indexing = HAS( m_featuresv10.features.shaderUniformBufferArrayDynamicIndexing );
+    limits.general_sampler_indexing = HAS( m_featuresv10.features.shaderSampledImageArrayDynamicIndexing );
+    limits.general_variable_indexing = HAS( m_featuresv10.features.shaderStorageBufferArrayDynamicIndexing );
+    m_shaderBuiltInResource->limits = limits;
 }
