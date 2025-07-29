@@ -37,6 +37,7 @@ public:
     void    Delete( void );
     void    Memcpy( const_pointer in_source, const uint32_t in_offset, const uint32_t in_count );
     void    Memset( const int in_val );
+    size_t  Size( void ) const { return sizeof( _t ) * m_count; }
 
     /// @brief Return the internal element count 
     /// @return 
@@ -86,7 +87,7 @@ inline void crvkPointer<_t>::Alloc( const uint32_t in_count, const uint32_t in_a
     m_count = in_count;
     m_data = static_cast<pointer>( SDL_malloc( sizeof( _t) * m_count ) );
     if ( in_initial != 0xFFFFFFFF )
-        std::memset( m_data, in_initial, sizeof( _t) / m_count );
+        std::memset( m_data, in_initial, sizeof( _t) * m_count );
     
     SDL_assert( m_data != nullptr );
 }
