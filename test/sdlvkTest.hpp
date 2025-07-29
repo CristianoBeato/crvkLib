@@ -37,7 +37,7 @@ private:
     void    InitSDL( void );
     void    InitVulkan( void );
     void    InitShaders( void );
-    void    InitPipeline( void );   
+    void    InitPipeline( const uint32_t in_samples  );   
     void    FinishSDL( void );
     void    FinishVulkan( void );
     void    RunLoop( void );

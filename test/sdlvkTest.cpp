@@ -19,6 +19,7 @@
 #include <iostream>
 #include <fstream>
 #include <stdexcept>
+#include <cstring>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL_vulkan.h>
@@ -163,42 +164,14 @@ void crvkTest::InitVulkan(void)
     // copy vertex to buffer
     m_vertexBuffer->SubData( m_device, 0, sizeof( crVertex ) * 4 );
 
-    m_shaderProgram = new crvkProgram();
+    InitShaders();
 
-    InitPipeline();
+    InitPipeline( 0 );
 }
 
 void crvkTest::InitShaders( void )
 {
-}
-
-/*
-static crvkShaderStage* CreateShader( , const char* in_srcPath, const crvkDevice* in_device )
-{
-    std::ifstream file( in_srcPath, std::ios::ate );
-
-    crvkShaderStage* vertexShader = nullptr;
     
-    if (!file.is_open()) 
-        throw std::runtime_error("failed to open file!");
-    
-    size_t fileSize = (size_t) file.tellg();
-    vertexShader = new crvkShaderStage();
-
-    const char* src = static_cast<const char*>( SDL_malloc( fileSize ) );
-    
-    // read source content 
-    file.seekg(0);
-    file.read( const_cast<char*>( src ), fileSize );
-    file.close();
-
-    // 
-    vertexShader->Create( in_device, 1, &src,  );
-}
-*/
-
-void crvkTest::InitPipeline(void)
-{
     size_t fileSize = 0;
     FILE* sourceFile;
     char* shaderSource = nullptr;
@@ -214,8 +187,6 @@ void crvkTest::InitPipeline(void)
         fseek( in_file, 0, SEEK_SET ); // back to data start 
         return size;
     };
-
-#if 1 // USE GLSL sources
 
     // Open and compile vertx shader
     sourceFile = fopen( "shaders/test_shader.vert", "r" );
@@ -255,15 +226,18 @@ void crvkTest::InitPipeline(void)
     shaderSource = static_cast<char*>( SDL_malloc( fileSize ) );
     std::memset( shaderSource, 0x00, fileSize );
     
-    // read source content 
-    fileSize = fSize( sourceFile );
-    
+    // read source content
+    fread( shaderSource, 1, fileSize, sourceFile ); 
+
+    // release the file 
+    fclose( sourceFile );
+
     // create the shader 
     fragmentShader = new crvkShader();
     if( !fragmentShader->Create( m_device,VK_SHADER_STAGE_FRAGMENT_BIT, shaderSource ) )
     {
         SDL_free( const_cast<char*>( shaderSource ) );
-        throw std::runtime_error("failed to createh the shader!");
+        throw std::runtime_error("failed to create the shader!");
     }
 
     SDL_free( const_cast<char*>( shaderSource ) );
@@ -282,29 +256,144 @@ void crvkTest::InitPipeline(void)
     // release shaders 
     delete vertexShader;
     delete fragmentShader;
+}
 
+void crvkTest::InitPipeline( const uint32_t in_samples )
+{
+    VkVertexInputBindingDescription bindingDescription{};
+    bindingDescription.binding = 0;
+    bindingDescription.stride = sizeof( crVertex );
+    bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+    
+    VkVertexInputAttributeDescription attributeDescriptions[3]{{}, {}, {}};
+    // vertex position
+    attributeDescriptions[0].binding = 0;
+    attributeDescriptions[0].location = 0;
+    attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[0].offset = offsetof( crVertex, pos);
 
-#else // USE DIRECT SPIR-V intermediate representation
+    // texture coordinate 
+    attributeDescriptions[1].binding = 0;
+    attributeDescriptions[1].location = 1;
+    attributeDescriptions[1].format = VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[1].offset = offsetof( crVertex, pos);
 
-#endif
+    // vertex color 
+    attributeDescriptions[2].binding = 0;
+    attributeDescriptions[2].location = 2;
+    attributeDescriptions[2].format = VK_FORMAT_R32G32B32_SFLOAT;
+    attributeDescriptions[2].offset = offsetof( crVertex, color);
 
-//    VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
-//    vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-//    vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-//    vertShaderStageInfo.module = vertShaderModule;
-//    vertShaderStageInfo.pName = "main";
+    VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+    vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-//    VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
-//    fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-//    fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-//    fragShaderStageInfo.module = fragShaderModule;
-//    fragShaderStageInfo.pName = "main";
+    vertexInputInfo.vertexBindingDescriptionCount = 1;
+    vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+    vertexInputInfo.vertexAttributeDescriptionCount = 3;
+    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions;
+
+    VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
+    inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    inputAssembly.primitiveRestartEnable = VK_FALSE;
+
+    VkPipelineTessellationStateCreateInfo pipelineTessellationStateCI{};
+
+    VkPipelineViewportStateCreateInfo viewportStateCI{};
+    viewportStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewportStateCI.viewportCount = 1;
+    viewportStateCI.scissorCount = 1;
+
+    VkPipelineRasterizationStateCreateInfo rasterizationStateCI{};
+    rasterizationStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rasterizationStateCI.depthClampEnable = VK_FALSE;
+    rasterizationStateCI.rasterizerDiscardEnable = VK_FALSE;
+    rasterizationStateCI.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterizationStateCI.lineWidth = 1.0f;
+    rasterizationStateCI.cullMode = VK_CULL_MODE_BACK_BIT;
+    rasterizationStateCI.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    rasterizationStateCI.depthBiasEnable = VK_FALSE;
+
+    VkPipelineMultisampleStateCreateInfo multisampleStateCI{};
+    multisampleStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisampleStateCI.sampleShadingEnable = in_samples > 0 ? VK_TRUE : VK_FALSE;
+    
+    //
+    if( in_samples < 2 )
+        multisampleStateCI.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    else if( in_samples < 4 )
+        multisampleStateCI.rasterizationSamples = VK_SAMPLE_COUNT_2_BIT;
+    else if( in_samples < 8 )
+        multisampleStateCI.rasterizationSamples = VK_SAMPLE_COUNT_4_BIT;
+    else if( in_samples < 16 )
+        multisampleStateCI.rasterizationSamples = VK_SAMPLE_COUNT_8_BIT;
+    else if( in_samples < 32 )
+        multisampleStateCI.rasterizationSamples = VK_SAMPLE_COUNT_16_BIT;
+    else if( in_samples < 64 )
+        multisampleStateCI.rasterizationSamples = VK_SAMPLE_COUNT_32_BIT;
+    else if( in_samples > 64 )
+        multisampleStateCI.rasterizationSamples = VK_SAMPLE_COUNT_64_BIT;
+
+    VkPipelineColorBlendAttachmentState colorBlendAttachment{};
+    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    colorBlendAttachment.blendEnable = VK_FALSE;
+
+    VkPipelineColorBlendStateCreateInfo colorBlendStateCI{};
+    colorBlendStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    colorBlendStateCI.logicOpEnable = VK_FALSE;
+    colorBlendStateCI.logicOp = VK_LOGIC_OP_COPY;
+    colorBlendStateCI.attachmentCount = 1;
+    colorBlendStateCI.pAttachments = &colorBlendAttachment;
+    colorBlendStateCI.blendConstants[0] = 0.0f;
+    colorBlendStateCI.blendConstants[1] = 0.0f;
+    colorBlendStateCI.blendConstants[2] = 0.0f;
+    colorBlendStateCI.blendConstants[3] = 0.0f;
+    
+    VkPipelineDepthStencilStateCreateInfo depthStencilStateCI{};
+
+    VkPipelineDynamicStateCreateInfo dynamicState{};
+    dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    VkDynamicState dynamicStates[11] = 
+    {
+        VK_DYNAMIC_STATE_VIEWPORT,
+        VK_DYNAMIC_STATE_SCISSOR,
+        VK_DYNAMIC_STATE_LINE_WIDTH,
+        VK_DYNAMIC_STATE_DEPTH_BIAS,
+        VK_DYNAMIC_STATE_DEPTH_BOUNDS,
+        VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK,
+        VK_DYNAMIC_STATE_CULL_MODE,
+        VK_DYNAMIC_STATE_FRONT_FACE,
+        VK_DYNAMIC_STATE_DEPTH_TEST_ENABLE,
+        VK_DYNAMIC_STATE_DEPTH_COMPARE_OP,
+        VK_DYNAMIC_STATE_DEPTH_BOUNDS_TEST_ENABLE
+    };
+    
+    dynamicState.dynamicStateCount = 11;
+    dynamicState.pDynamicStates = dynamicStates;
 
     m_pipeline = new crvkPipelineCommand();
-    m_pipeline->Create( m_device, m_swapchain->FrameCount(), 0,  );
-
-    delete fragmentShader;
-    delete vertexShader;
+    if( m_pipeline->Create( 
+            m_device, 
+            m_swapchain->FrameCount(), 
+            0, 
+            0, 
+            m_shaderProgram->PipelineShaderStagesCount(),
+            m_shaderProgram->PipelineShaderStages(),
+            &vertexInputInfo,
+            &inputAssembly,
+            &pipelineTessellationStateCI,
+            &viewportStateCI,
+            &rasterizationStateCI,
+            &multisampleStateCI,
+            &depthStencilStateCI,
+            &colorBlendStateCI,
+            &dynamicState,
+            m_swapchain->RenderPass(),
+            nullptr
+        ) )
+    {
+        throw std::runtime_error("failed to create pipeline!");
+    }
 }
 
 void crvkTest::FinishSDL(void)

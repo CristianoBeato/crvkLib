@@ -120,7 +120,7 @@ bool crvkShader::Create( const crvkDevice *in_device, const VkShaderStageFlagBit
         return false;
     }
     
-    if ( glslang_shader_preprocess( m_shdhnd, &m_shaderCI ) == 0)	
+    if ( glslang_shader_preprocess( m_shdhnd, &m_shaderCI ) == 0 )	
     {
         printf("%s\n", glslang_shader_get_info_log( m_shdhnd ) );
         printf("%s\n", glslang_shader_get_info_debug_log( m_shdhnd ) );
