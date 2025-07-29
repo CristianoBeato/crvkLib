@@ -25,11 +25,11 @@
 typedef struct glslang_shader_s glslang_shader_t;
 typedef struct glslang_program_s glslang_program_t;
 typedef struct glslang_input_s glslang_input_t;
-class crvkShader
+class crvkGLSLShader
 {
 public:
-    crvkShader( void );
-    ~crvkShader( void );
+    crvkGLSLShader( void );
+    ~crvkGLSLShader( void );
     bool                            Create( const crvkDevice* in_device, const VkShaderStageFlagBits in_stage, const char * in_sources );
     void                            Destroy( void );
     VkShaderStageFlagBits           ShaderStageFlag( void ) const { return m_stage; }
@@ -41,20 +41,35 @@ private:
     glslang_shader_t*               m_shdhnd;  
 };
 
-class crvkProgram
+class crvkGLSLProgram
 {
 public:
-    crvkProgram( void );
-    ~crvkProgram( void );
+    crvkGLSLProgram( void );
+    ~crvkGLSLProgram( void );
     void                                    Create( const crvkDevice* in_device );
     void                                    Destroy( void );
-    void                                    AttachShader( const crvkShader* in_shader );
+    void                                    AttachShader( const crvkGLSLShader* in_shader );
     bool                                    LinkProgram( void );
     const uint32_t                          PipelineShaderStagesCount( void ) const { return m_stages.Count(); }
     const VkPipelineShaderStageCreateInfo*  PipelineShaderStages( void ) const; 
 
 private:
     glslang_program_t*                                  m_program;
+    VkDevice                                            m_device;
+    crvkDynamicVector<VkPipelineShaderStageCreateInfo>  m_stages;
+};
+
+class crvkSpirVProgram
+{
+public:
+    crvkSpirVProgram( void );
+    ~crvkSpirVProgram( void );
+    bool    Create( const crvkDevice* in_device, const VkShaderStageFlagBits *in_stage, const uint32_t** in_sources, const size_t* in_sizes, const uint32_t in_count );
+    void    Destroy( void );
+    const uint32_t                          PipelineShaderStagesCount( void ) const { return m_stages.Count(); }
+    const VkPipelineShaderStageCreateInfo*  PipelineShaderStages( void ) const;
+
+private:
     VkDevice                                            m_device;
     crvkDynamicVector<VkPipelineShaderStageCreateInfo>  m_stages;
 };

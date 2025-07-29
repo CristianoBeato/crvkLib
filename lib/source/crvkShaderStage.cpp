@@ -86,16 +86,16 @@ static const glslang_stage_t VulkanStageToGlslangStage( const VkShaderStageFlagB
     return stage;
 }
 
-crvkShader::crvkShader( void ) : m_shdhnd( nullptr )
+crvkGLSLShader::crvkGLSLShader( void ) : m_shdhnd( nullptr )
 {
 }
 
-crvkShader::~crvkShader(void)
+crvkGLSLShader::~crvkGLSLShader(void)
 {
     Destroy();
 }
 
-bool crvkShader::Create( const crvkDevice *in_device, const VkShaderStageFlagBits in_stage, const char * in_sources )
+bool crvkGLSLShader::Create( const crvkDevice *in_device, const VkShaderStageFlagBits in_stage, const char * in_sources )
 {
     m_stage = in_stage;
     m_device = const_cast<crvkDevice*>( in_device );
@@ -139,7 +139,7 @@ bool crvkShader::Create( const crvkDevice *in_device, const VkShaderStageFlagBit
     return true;
 }
 
-void crvkShader::Destroy( void )
+void crvkGLSLShader::Destroy( void )
 {
     if ( m_shdhnd != nullptr )
     {
@@ -150,17 +150,17 @@ void crvkShader::Destroy( void )
     m_device = nullptr;
 }
 
-crvkProgram::crvkProgram(void) : 
+crvkGLSLProgram::crvkGLSLProgram(void) : 
     m_program( nullptr ),
     m_device( nullptr )
 {
 }
 
-crvkProgram::~crvkProgram(void)
+crvkGLSLProgram::~crvkGLSLProgram(void)
 {
 }
 
-void crvkProgram::Create( const crvkDevice *in_device )
+void crvkGLSLProgram::Create( const crvkDevice *in_device )
 {
     // get the device 
     m_device = in_device->Device();
@@ -169,9 +169,8 @@ void crvkProgram::Create( const crvkDevice *in_device )
     m_program = glslang_program_create();
 }
 
-void crvkProgram::Destroy( void )
-{
-    
+void crvkGLSLProgram::Destroy( void )
+{   
     for ( uint32_t i = 0; i < m_stages.Count(); i++)
     {
         auto stage = m_stages[i];
@@ -185,7 +184,7 @@ void crvkProgram::Destroy( void )
     m_stages.Clear();
 }
 
-void crvkProgram::AttachShader(const crvkShader *in_shader)
+void crvkGLSLProgram::AttachShader(const crvkGLSLShader *in_shader)
 {
     VkPipelineShaderStageCreateInfo pipelineShaderStageCI{};
 
@@ -200,10 +199,10 @@ void crvkProgram::AttachShader(const crvkShader *in_shader)
     m_stages.Append( pipelineShaderStageCI );
 }
 
-bool crvkProgram::LinkProgram(void)
+bool crvkGLSLProgram::LinkProgram(void)
 {
     // link shaders stages 
-    if ( !glslang_program_link( m_program, GLSLANG_MSG_SPV_RULES_BIT | GLSLANG_MSG_VULKAN_RULES_BIT ) ) 
+    if ( !glslang_program_link( m_program, GLSLANG_MSG_DEFAULT_BIT /*GLSLANG_MSG_SPV_RULES_BIT | GLSLANG_MSG_VULKAN_RULES_BIT*/ ) ) 
     {
         printf("%s\n", glslang_program_get_info_log( m_program ));
         printf("%s\n", glslang_program_get_info_debug_log( m_program ));
@@ -251,17 +250,77 @@ bool crvkProgram::LinkProgram(void)
         auto result = vkCreateShaderModule( m_device, &shaderModuleCI, k_allocationCallbacks, &m_stages[i].module ); 
         if ( result != VK_SUCCESS ) 
         {    
-            crvkAppendError( "crvkShaderStage::Create::vkCreateShaderModule", VK_ERROR_UNKNOWN );
+            crvkAppendError( "crvkGLSLShader::Create::vkCreateShaderModule", VK_ERROR_UNKNOWN );
             return false;
         }
 
         code.Free(); // release source
     }
     
-    return false;
+    // clear program
+    glslang_program_delete( m_program );
+
+    return true;
 }
 
-const VkPipelineShaderStageCreateInfo *crvkProgram::PipelineShaderStages(void) const
+const VkPipelineShaderStageCreateInfo *crvkGLSLProgram::PipelineShaderStages(void) const
 {
     return m_stages.Pointer();
+}
+
+crvkSpirVProgram::crvkSpirVProgram( void ) : m_device( nullptr )
+{
+}
+
+crvkSpirVProgram::~crvkSpirVProgram( void )
+{
+}
+
+bool crvkSpirVProgram::Create( const crvkDevice* in_device, const VkShaderStageFlagBits *in_stage, const uint32_t** in_sources, const size_t* in_sizes, const uint32_t in_count )
+{
+    m_stages.Resize( in_count );
+
+    for ( uint32_t i = 0; i < m_stages.Count(); i++)
+    {
+        // configure shader stage
+        auto &stage = m_stages[i];
+        stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        stage.stage = in_stage[i];
+        stage.pName = k_GLSL_SHADER_ENTRY_POINT;   
+        
+
+        // create the shader module
+        VkShaderModuleCreateInfo shaderModuleCI{};
+        shaderModuleCI.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        shaderModuleCI.codeSize = in_sizes[i];
+        shaderModuleCI.pCode = in_sources[i];
+        shaderModuleCI.pNext = nullptr;
+
+        auto result = vkCreateShaderModule( m_device, &shaderModuleCI, k_allocationCallbacks, &m_stages[i].module ); 
+        if ( result != VK_SUCCESS ) 
+        {    
+            crvkAppendError( "crvkGLSLShader::Create::vkCreateShaderModule", VK_ERROR_UNKNOWN );
+            return false;
+        }
+    }
+}
+
+void crvkSpirVProgram::Destroy( void )
+{
+    for ( uint32_t i = 0; i < m_stages.Count(); i++)
+    {
+        auto &stage = m_stages[i];
+        if ( stage.module == nullptr )
+            continue;
+        
+        vkDestroyShaderModule( m_device, stage.module, k_allocationCallbacks );
+        stage.module = nullptr;    
+    }
+
+    m_stages.Clear();
+}
+
+const VkPipelineShaderStageCreateInfo* crvkSpirVProgram::PipelineShaderStages( void ) const
+{
+    return &m_stages;
 }
