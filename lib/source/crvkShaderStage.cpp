@@ -102,9 +102,9 @@ bool crvkShader::Create( const crvkDevice *in_device, const VkShaderStageFlagBit
     m_shaderCI.Alloc( 1 );
     m_shaderCI->language = GLSLANG_SOURCE_GLSL;
     m_shaderCI->client = GLSLANG_CLIENT_VULKAN; 
-    m_shaderCI->client_version = GLSLANG_TARGET_VULKAN_1_3;
+    m_shaderCI->client_version = GLSLANG_TARGET_VULKAN_1_3; // GLSLANG_TARGET_VULKAN_1_3
     m_shaderCI->target_language = GLSLANG_TARGET_SPV;
-    m_shaderCI->target_language_version = GLSLANG_TARGET_SPV_1_6;
+    m_shaderCI->target_language_version = GLSLANG_TARGET_SPV_1_3; //GLSLANG_TARGET_SPV_1_6;
     m_shaderCI->messages = GLSLANG_MSG_DEFAULT_BIT;
     m_shaderCI->default_profile = GLSLANG_NO_PROFILE;
     m_shaderCI->resource = m_device->BuiltInShaderResource();
@@ -120,7 +120,7 @@ bool crvkShader::Create( const crvkDevice *in_device, const VkShaderStageFlagBit
         return false;
     }
     
-    if ( !glslang_shader_preprocess( m_shdhnd, &m_shaderCI ) )	
+    if ( glslang_shader_preprocess( m_shdhnd, &m_shaderCI ) == 0)	
     {
         printf("%s\n", glslang_shader_get_info_log( m_shdhnd ) );
         printf("%s\n", glslang_shader_get_info_debug_log( m_shdhnd ) );
@@ -128,7 +128,7 @@ bool crvkShader::Create( const crvkDevice *in_device, const VkShaderStageFlagBit
         return false;
     }
 
-    if ( !glslang_shader_parse( m_shdhnd, &m_shaderCI)) 
+    if ( glslang_shader_parse( m_shdhnd, &m_shaderCI) == 0 ) 
     {
         printf( "%s\n", glslang_shader_get_info_log( m_shdhnd ) );
         printf( "%s\n", glslang_shader_get_info_debug_log( m_shdhnd ) );
@@ -143,45 +143,12 @@ void crvkShader::Destroy( void )
 {
     if ( m_shdhnd != nullptr )
     {
-        delete m_shdhnd;
+        glslang_shader_delete( m_shdhnd );
         m_shdhnd = nullptr;
     }
     
     m_device = nullptr;
 }
-
-//bool crvkShaderStage::Create(const crvkDevice *in_device, const uint32_t in_sourceCount, const char* const* in_sources, const VkShaderStageFlagBits in_shaderStageFlagBits, const void *in_next)
-//{
-//    
-//    
-//    std::vector<uint32_t> spirvSource;
-//
-//    
-//
-//    
-//
-//    glslang::GlslangToSpv( *program.getIntermediate(shaderStage), spirvSource );
-//
-//    // create the shader module
-//    VkShaderModuleCreateInfo shaderModuleCI{};
-//    shaderModuleCI.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-//    shaderModuleCI.codeSize = spirvSource.size() * sizeof( uint32_t );
-//    shaderModuleCI.pCode = spirvSource.data();
-//    shaderModuleCI.pNext = in_next;
-//    auto result = vkCreateShaderModule( in_device->Device(), &shaderModuleCI, nullptr, &m_shaderModule ); 
-//    if ( result != VK_SUCCESS ) 
-//    {    
-//        crvkAppendError( "crvkShaderStage::Create::vkCreateShaderModule", result );
-//        return false;
-//    }
-//
-//    m_pipelineShaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-//    m_pipelineShaderStageCreateInfo.stage = in_shaderStageFlagBits;
-//    m_pipelineShaderStageCreateInfo.module = m_shaderModule;
-//    m_pipelineShaderStageCreateInfo.pName = k_GLSL_SHADER_ENTRY_POINT; // glsl use defaut main entry
-//
-//    return true;
-//}
 
 crvkProgram::crvkProgram(void) : 
     m_program( nullptr ),
@@ -235,6 +202,7 @@ void crvkProgram::AttachShader(const crvkShader *in_shader)
 
 bool crvkProgram::LinkProgram(void)
 {
+    // link shaders stages 
     if ( !glslang_program_link( m_program, GLSLANG_MSG_SPV_RULES_BIT | GLSLANG_MSG_VULKAN_RULES_BIT ) ) 
     {
         printf("%s\n", glslang_program_get_info_log( m_program ));
@@ -242,9 +210,10 @@ bool crvkProgram::LinkProgram(void)
         return false;
     }
 
-
+    // create the vulkan stages 
     for ( uint32_t i = 0; i < m_stages.Count(); i++)
     {
+#if 0
         // aquire spirV shader source
         glslang_spv_options_t spvOptions{};        
         spvOptions.disable_optimizer = false;
@@ -265,12 +234,18 @@ bool crvkProgram::LinkProgram(void)
         spvOptions.emit_nonsemantic_shader_debug_source = true;
 #endif
         glslang_program_SPIRV_generate_with_options( m_program, VulkanStageToGlslangStage( m_stages[i].stage ), &spvOptions );
+#else
+        glslang_program_SPIRV_generate( m_program, VulkanStageToGlslangStage( m_stages[i].stage ) );
+#endif
+
+        crvkPointer<uint32_t> code;
+        code.Alloc( glslang_program_SPIRV_get_size( m_program ), 0x00 );
 
         // create the shader module
         VkShaderModuleCreateInfo shaderModuleCI{};
         shaderModuleCI.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        shaderModuleCI.codeSize = glslang_program_SPIRV_get_size( m_program );
-        shaderModuleCI.pCode = static_cast<uint32_t*>( SDL_malloc( shaderModuleCI.codeSize ) );
+        shaderModuleCI.codeSize = code.Size();
+        shaderModuleCI.pCode = &code;
         shaderModuleCI.pNext = nullptr;
 
         auto result = vkCreateShaderModule( m_device, &shaderModuleCI, k_allocationCallbacks, &m_stages[i].module ); 
@@ -280,7 +255,7 @@ bool crvkProgram::LinkProgram(void)
             return false;
         }
 
-        SDL_free( const_cast<uint32_t*>( shaderModuleCI.pCode ) ); // release source
+        code.Free(); // release source
     }
     
     return false;
