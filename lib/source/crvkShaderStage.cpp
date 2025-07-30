@@ -276,7 +276,7 @@ crvkSpirVProgram::~crvkSpirVProgram( void )
 {
 }
 
-bool crvkSpirVProgram::Create( const crvkDevice* in_device, const VkShaderStageFlagBits *in_stage, const uint32_t** in_sources, const size_t* in_sizes, const uint32_t in_count )
+bool crvkSpirVProgram::Create( const crvkDevice* in_device, const VkShaderStageFlagBits *in_stage, uint32_t** in_sources, const size_t* in_sizes, const uint32_t in_count )
 {
     m_stages.Resize( in_count );
 
@@ -288,7 +288,6 @@ bool crvkSpirVProgram::Create( const crvkDevice* in_device, const VkShaderStageF
         stage.stage = in_stage[i];
         stage.pName = k_GLSL_SHADER_ENTRY_POINT;   
         
-
         // create the shader module
         VkShaderModuleCreateInfo shaderModuleCI{};
         shaderModuleCI.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;

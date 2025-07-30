@@ -1,4 +1,4 @@
-/*
+    /*
 ===========================================================================================
     This file is part of crvkLib Vulkan + SDL minimal framework.
 
@@ -25,7 +25,17 @@
 typedef struct glslang_shader_s glslang_shader_t;
 typedef struct glslang_program_s glslang_program_t;
 typedef struct glslang_input_s glslang_input_t;
-class crvkGLSLShader
+
+class crvkProgram
+{
+public:
+    crvkProgram( void ) {};
+    ~crvkProgram( void ) {};
+    virtual const uint32_t                          PipelineShaderStagesCount( void ) const = 0;
+    virtual const VkPipelineShaderStageCreateInfo*  PipelineShaderStages( void ) const = 0;
+};
+
+class crvkGLSLShader : public crvkProgram
 {
 public:
     crvkGLSLShader( void );
@@ -41,17 +51,17 @@ private:
     glslang_shader_t*               m_shdhnd;  
 };
 
-class crvkGLSLProgram
+class crvkGLSLProgram : public crvkProgram
 {
 public:
     crvkGLSLProgram( void );
     ~crvkGLSLProgram( void );
-    void                                    Create( const crvkDevice* in_device );
-    void                                    Destroy( void );
-    void                                    AttachShader( const crvkGLSLShader* in_shader );
-    bool                                    LinkProgram( void );
-    const uint32_t                          PipelineShaderStagesCount( void ) const { return m_stages.Count(); }
-    const VkPipelineShaderStageCreateInfo*  PipelineShaderStages( void ) const; 
+    void                                            Create( const crvkDevice* in_device );
+    void                                            Destroy( void );
+    void                                            AttachShader( const crvkGLSLShader* in_shader );
+    bool                                            LinkProgram( void );
+    virtual const uint32_t                          PipelineShaderStagesCount( void ) const { return m_stages.Count(); }
+    virtual const VkPipelineShaderStageCreateInfo*  PipelineShaderStages( void ) const; 
 
 private:
     glslang_program_t*                                  m_program;
@@ -59,15 +69,15 @@ private:
     crvkDynamicVector<VkPipelineShaderStageCreateInfo>  m_stages;
 };
 
-class crvkSpirVProgram
+class crvkSpirVProgram : public crvkProgram
 {
 public:
     crvkSpirVProgram( void );
     ~crvkSpirVProgram( void );
-    bool    Create( const crvkDevice* in_device, const VkShaderStageFlagBits *in_stage, const uint32_t** in_sources, const size_t* in_sizes, const uint32_t in_count );
+    bool    Create( const crvkDevice* in_device, const VkShaderStageFlagBits *in_stage, uint32_t** in_sources, const size_t* in_sizes, const uint32_t in_count );
     void    Destroy( void );
-    const uint32_t                          PipelineShaderStagesCount( void ) const { return m_stages.Count(); }
-    const VkPipelineShaderStageCreateInfo*  PipelineShaderStages( void ) const;
+    virtual const uint32_t                          PipelineShaderStagesCount( void ) const { return m_stages.Count(); }
+    virtual const VkPipelineShaderStageCreateInfo*  PipelineShaderStages( void ) const;
 
 private:
     VkDevice                                            m_device;
