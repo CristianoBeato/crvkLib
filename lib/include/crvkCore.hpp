@@ -96,6 +96,7 @@ class crvkPointer;
 #include "crvkSemaphore.hpp"
 #include "crvkSwapchain.hpp"
 #include "crvkBuffer.hpp"
+#include "crvkImage.hpp"
 #include "crvkShaderStage.hpp"
 #include "crvkPipeline.hpp"
 

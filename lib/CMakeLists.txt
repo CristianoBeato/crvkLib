@@ -20,8 +20,9 @@
 ################################################################################
 
 set( CRVK_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkBuffer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkCore.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkBuffer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkImage.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkCommandBuffer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkContext.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkDevice.cpp
@@ -34,8 +35,9 @@ set( CRVK_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkPointer.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkShaderStage.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkDynamicVector.hpp
-    
+
     ${CMAKE_CURRENT_SOURCE_DIR}/include/crvkBuffer.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/crvkImage.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/include/crvkCommandBuffer.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/include/crvkContext.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/include/crvkCore.hpp
