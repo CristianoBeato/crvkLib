@@ -52,50 +52,81 @@ public:
     virtual void        Destroy( void );
 
     /// @brief 
-    /// @param in_data 
-    /// @param in_offset 
-    /// @param in_size 
-    virtual void        SubData( const void* in_data, const uintptr_t in_offset, const size_t in_size ) = 0;
+    /// @param srcBuffer 
+    virtual void        CopyFromBuffer( const VkBuffer in_srcBuffer, const VkBufferCopy2* in_regions, const uint32_t in_count ){};
+
+    /// @brief 
+    /// @param srcBuffer 
+    virtual void        CopyToBuffer( const VkBuffer in_dstBuffer, const VkBufferCopy2* in_regions, const uint32_t in_count ){};
 
     /// @brief 
     /// @param in_data 
     /// @param in_offset 
     /// @param in_size 
-    virtual void        GetSubData( void* in_data, const uintptr_t in_offset, const size_t in_size ) = 0;
+    virtual void        SubData( const void* in_data, const uintptr_t in_offset, const size_t in_size ) const {};
+
+    /// @brief 
+    /// @param in_data 
+    /// @param in_offset 
+    /// @param in_size 
+    virtual void        GetSubData( void* in_data, const uintptr_t in_offset, const size_t in_size ) const {};
 
     /// @brief 
     /// @param in_offset 
     /// @param in_size 
     /// @param in_flags 
     /// @return 
-    virtual void*       Map( const uintptr_t in_offset, const size_t in_size, const uint32_t in_flags ) = 0;
+    virtual void*       Map( const uintptr_t in_offset, const size_t in_size, const uint32_t in_flags ) const;
 
     /// @brief 
     /// @param  
-    virtual void        Unmap( void ) = 0;
+    virtual void        Unmap( void ) const;
     
     /// @brief 
     /// @param in_offset 
     /// @param in_size 
-    virtual void        Flush( const uintptr_t in_offset, const size_t in_size ) = 0;
+    virtual void        Flush( const uintptr_t in_offset, const size_t in_size );
     
     /// @brief 
     /// @param  
     /// @return 
-    virtual VkBuffer    Handle( void ) const = 0;
+    virtual VkBuffer    Handle( void ) const { return m_buffer; };
 
 protected:
     uint32_t            m_flags;
+    VkBuffer            m_buffer;
+    VkDeviceMemory      m_memory;
+    crvkDevice*         m_device;
+
+private:
+    crvkBuffer( const crvkBuffer & ) = delete;
+    crvkBuffer operator=( const crvkBuffer & ) = delete;
+};
+
+/// @brief a simple buffer 
+class crvkBufferStatic : public crvkBuffer
+{
+public:
+    crvkBufferStatic( void );
+    ~crvkBufferStatic( void );
+
+    virtual bool Create( const crvkDevice* in_deviceProps, const size_t in_size, const VkBufferUsageFlags in_usage, const uint32_t in_flags ) override;
+    virtual void Destroy( void ) override;
+    
+    /// @brief 
+    /// @param srcBuffer 
+    virtual void        CopyFromBuffer( const VkBuffer in_srcBuffer, const VkBufferCopy2* in_regions, const uint32_t in_count ) override;
+    virtual void        CopyToBuffer( const VkBuffer in_dstBuffer, const VkBufferCopy2* in_regions, const uint32_t in_count ) override;
+
+    virtual void        Flush( const uintptr_t in_offset, const size_t in_size ) override;
+
+protected:
     uint64_t            m_useValue;
     uint64_t            m_copyValue;
     VkSemaphore         m_copySemaphore;
     VkSemaphore         m_useSemaphore;    
-    VkFence             m_fence;
-    crvkDevice*         m_device;
+    VkCommandBuffer     m_commandBuffer;
 
-        /// @brief  
-    /// @return /
-    virtual VkFence     Fence( void ) const { return m_fence; };
 
     /// @brief 
     /// @param  
@@ -111,58 +142,29 @@ protected:
     VkSemaphoreSubmitInfo   SignalLastCopy( void );
     VkSemaphoreSubmitInfo   WaitLastUse( void );
     VkSemaphoreSubmitInfo   WaitLastCopy( void );
-
-private:
-    crvkBuffer( const crvkBuffer & ) = delete;
-    crvkBuffer operator=( const crvkBuffer & ) = delete;
-};
-
-/// @brief a simple buffer 
-class crvkBufferStatic : public crvkBuffer
-{
-public:
-    crvkBufferStatic( void );
-    ~crvkBufferStatic( void );
-    virtual bool Create( const crvkDevice* in_deviceProps, const size_t in_size, const VkBufferUsageFlags in_usage, const uint32_t in_flags );
-    virtual void Destroy( void );
-    virtual void SubData( const void* in_data, const uintptr_t in_offset, const size_t in_size );
-    virtual void GetSubData( void* in_data, const uintptr_t in_offset, const size_t in_size );
-    virtual void* Map( const uintptr_t in_offset, const size_t in_size, const uint32_t in_flags );
-    virtual void Unmap( void );
-    virtual void Flush( const uintptr_t in_offset, const size_t in_size );
-    virtual VkBuffer Handle( void ) const;
-
-private:
-    VkSemaphore     m_semaphore;
-    VkBuffer        m_buffer;
-    VkDeviceMemory  m_memory;
 };
 
 ///
 /// @brief crvkBufferStaging works like OpenGL buffers, create a two stage buffer,    
 /// a GPU memory bufer and a CPU side buffer and perform the buffer and sincronization
 ///
-class crvkBufferStaging : public crvkBuffer
+class crvkBufferStaging : public crvkBufferStatic
 {
 public:
     crvkBufferStaging( void );
     ~crvkBufferStaging( void );
-    virtual bool Create( const crvkDevice* in_deviceProps, const size_t in_size, const VkBufferUsageFlags in_usage, const uint32_t in_flags );
-    virtual void Destroy( void );
-    virtual void SubData( const void* in_data, const uintptr_t in_offset, const size_t in_size );
-    virtual void GetSubData( void* in_data, const uintptr_t in_offset, const size_t in_size );
-    virtual void* Map( const uintptr_t in_offset, const size_t in_size, const uint32_t in_flags );
-    virtual void Unmap( void );
-    virtual void Flush( const uintptr_t in_offset, const size_t in_size );
-    virtual VkBuffer Handle( void ) const;
-
+    virtual bool Create( const crvkDevice* in_deviceProps, const size_t in_size, const VkBufferUsageFlags in_usage, const uint32_t in_flags ) override;
+    virtual void Destroy( void ) override;
+    virtual void SubData( const void* in_data, const uintptr_t in_offset, const size_t in_size ) override;
+    virtual void GetSubData( void* in_data, const uintptr_t in_offset, const size_t in_size ) override;
+    virtual void* Map( const uintptr_t in_offset, const size_t in_size, const uint32_t in_flags ) override;
+    virtual void Unmap( void ) override;
+    virtual void Flush( const uintptr_t in_offset, const size_t in_size ) override;
+    
 private:
     bool                m_semaphoreInUse;
-    VkBuffer            m_gpuBuffer;
-    VkBuffer            m_cpuBuffer;
-    VkDeviceMemory      m_gpuBufferMemory;
-    VkDeviceMemory      m_cpuBufferMemory;
-    VkCommandBuffer     m_commandBuffer;
+    VkBuffer            m_stagingBuffer;
+    VkDeviceMemory      m_stagingMemory;
 };
 
 #endif //!__CRVK_BUFFER_HPP__
