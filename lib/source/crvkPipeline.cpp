@@ -32,45 +32,18 @@ crvkGraphicPipeline::crvkGraphicPipeline( void )
 {
 }
 
-
 /*
 ==============================================
-crvkGraphicPipeline::crvkGraphicPipeline
+crvkGraphicPipeline::Create
 ==============================================
 */
-crvkGraphicPipeline::~crvkGraphicPipeline( void )
-{
-}
-
-
-/*
-==============================================
-crvkPipelineCommand::crvkPipelineCommand
-==============================================
-*/
-crvkPipelineCommand::crvkPipelineCommand( void )
-{
-}
-
-/*
-==============================================
-crvkPipelineCommand::crvkPipelineCommand
-==============================================
-*/
-crvkPipelineCommand::~crvkPipelineCommand( void )
-{
-}
-
-/*
-==============================================
-crvkPipelineCommand::crvkPipelineCommand
-==============================================
-*/
-bool crvkPipelineCommand::Create( 
-        const crvkDevice* in_device, 
-        const uint32_t in_frames, 
+bool crvkGraphicPipeline::Create( 
+        const crvkDevice* in_device,
         const uint32_t in_subpass,
-        const VkPipelineCreateFlags in_flags,
+        const uint32_t in_setLayoutCount,
+        const VkDescriptorSetLayout* in_setLayouts,
+        const uint32_t in_pushConstantRangeCount,  
+        const VkPushConstantRange* in_pushConstantRanges,
         const uint32_t in_stageCount,
         const VkPipelineShaderStageCreateInfo* in_stagesCreateInfo,
         const VkPipelineVertexInputStateCreateInfo* in_vertexInputStateCreateInfo,
@@ -83,30 +56,28 @@ bool crvkPipelineCommand::Create(
         const VkPipelineColorBlendStateCreateInfo* in_colorBlendStateCreateInfo,
         const VkPipelineDynamicStateCreateInfo* in_dynamicStateCreateInfo,
         const VkRenderPass in_renderPass,
-        const VkPipeline in_basePipelineHandle )
+        const VkPipeline in_basePipelineHandle
+    )
 {
     VkResult result = VK_SUCCESS;
 
-    // get the graphics queue 
-    auto graphics = in_device->GetQueue( crvkDeviceQueue::CRVK_DEVICE_QUEUE_GRAPHICS );
-
-    m_device = in_device->Device();
-    m_commandPool = graphics->CommandPool();
-
     ///
-    /// create the pipeline 
+    /// create the pipeline Layout 
     /// ==========================================================================
-    VkPipelineLayoutCreateInfo pipelineLayoutCI{};
+     VkPipelineLayoutCreateInfo pipelineLayoutCI{};
     pipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutCI.setLayoutCount = 0;
-    pipelineLayoutCI.pushConstantRangeCount = 0;
-
-    result = vkCreatePipelineLayout( m_device, &pipelineLayoutCI, k_allocationCallbacks, &m_pipelineLayout ); 
+    pipelineLayoutCI.flags = 0;
+    pipelineLayoutCI.setLayoutCount = in_setLayoutCount;
+    pipelineLayoutCI.pSetLayouts = in_setLayouts;
+    pipelineLayoutCI.pushConstantRangeCount = in_pushConstantRangeCount;
+    pipelineLayoutCI.pPushConstantRanges = in_pushConstantRanges;
+    auto result = vkCreatePipelineLayout( m_device->Device(), &pipelineLayoutCI, k_allocationCallbacks, &m_pipelineLayout ); 
     if( result != VK_SUCCESS) 
     {
-        crvkAppendError( "crvkPipelineCommand::Create::vkCreatePipelineLayout", result );
+        crvkAppendError( "crvkGraphicPipeline::Create::vkCreatePipelineLayout", result );
         return false;
     }
+
 
     ///
     /// create the pipeline 
@@ -126,12 +97,105 @@ bool crvkPipelineCommand::Create(
     pipelineInfo.layout = m_pipelineLayout;
     pipelineInfo.subpass = in_subpass;
     pipelineInfo.basePipelineHandle = in_basePipelineHandle;
-    result = vkCreateGraphicsPipelines( m_device, VK_NULL_HANDLE, 1, &pipelineInfo, k_allocationCallbacks, &m_graphicsPipeline ); 
+    result = vkCreateGraphicsPipelines( m_device->Device(), VK_NULL_HANDLE, 1, &pipelineInfo, k_allocationCallbacks, &m_pipeline ); 
     if ( result != VK_SUCCESS ) 
     {
-        crvkAppendError( "crvkPipelineCommand::Create::vkCreateGraphicsPipelines", result );
+        crvkAppendError( "crvkGraphicPipeline::Create::vkCreateGraphicsPipelines", result );
         return false;
     }
+}
+
+/*
+==============================================
+crvkGraphicPipeline::Destroy
+==============================================
+*/
+void crvkGraphicPipeline::Destroy( void )
+{
+
+}
+
+/*
+==============================================
+crvkGraphicPipeline::crvkGraphicPipeline
+==============================================
+*/
+crvkGraphicPipeline::~crvkGraphicPipeline( void )
+{
+}
+
+
+/*
+==============================================
+crvkGraphicPipelineExecutor::crvkGraphicPipelineExecutor
+==============================================
+*/
+crvkGraphicPipelineExecutor::crvkGraphicPipelineExecutor( void )
+{
+}
+
+/*
+==============================================
+crvkGraphicPipelineExecutor::crvkGraphicPipelineExecutor
+==============================================
+*/
+crvkGraphicPipelineExecutor::~crvkGraphicPipelineExecutor( void )
+{
+}
+
+/*
+==============================================
+crvkGraphicPipelineExecutor::crvkGraphicPipelineExecutor
+==============================================
+*/
+bool crvkGraphicPipelineExecutor::Create( 
+        const crvkDevice* in_device, 
+        const uint32_t in_frames, 
+        const uint32_t in_subpass,
+        const uint32_t in_setLayoutCount,
+        const VkDescriptorSetLayout* in_setLayouts,
+        const uint32_t in_pushConstantRangeCount,  
+        const VkPushConstantRange* in_pushConstantRanges,
+        const uint32_t in_stageCount,
+        const VkPipelineShaderStageCreateInfo* in_stagesCreateInfo,
+        const VkPipelineVertexInputStateCreateInfo* in_vertexInputStateCreateInfo,
+        const VkPipelineInputAssemblyStateCreateInfo* in_inputAssemblyStateCreateInfo,
+        const VkPipelineTessellationStateCreateInfo* in_tessellationStateCreateInfo,
+        const VkPipelineViewportStateCreateInfo* in_viewportStateCreateInfo,
+        const VkPipelineRasterizationStateCreateInfo* in_rasterizationStateCreateInfo,
+        const VkPipelineMultisampleStateCreateInfo* in_multisampleStateCreateInfo,
+        const VkPipelineDepthStencilStateCreateInfo* in_depthStencilStateCreateInfo,
+        const VkPipelineColorBlendStateCreateInfo* in_colorBlendStateCreateInfo,
+        const VkPipelineDynamicStateCreateInfo* in_dynamicStateCreateInfo,
+        const VkRenderPass in_renderPass,
+        const VkPipeline in_basePipelineHandle )
+{
+    VkResult result = VK_SUCCESS;
+
+    // get the graphics queue 
+    auto graphics = in_device->GetQueue( crvkDeviceQueue::CRVK_DEVICE_QUEUE_GRAPHICS );
+
+    if( !crvkGraphicPipeline::Create( 
+        in_device, 
+        in_subpass, 
+        in_setLayoutCount, 
+        in_setLayouts, 
+        in_pushConstantRangeCount, 
+        in_pushConstantRanges, 
+        in_stageCount, 
+        in_stagesCreateInfo, 
+        in_vertexInputStateCreateInfo, 
+        in_inputAssemblyStateCreateInfo, 
+        in_tessellationStateCreateInfo,
+        in_viewportStateCreateInfo,
+        in_rasterizationStateCreateInfo,
+        in_multisampleStateCreateInfo,
+        in_depthStencilStateCreateInfo,
+        in_colorBlendStateCreateInfo,
+        in_dynamicStateCreateInfo,
+        in_renderPass,
+        in_basePipelineHandle ) )
+        return false;
 
     ///
     /// Allocate command buffers
@@ -143,11 +207,11 @@ bool crvkPipelineCommand::Create(
     allocInfo.commandBufferCount = in_frames;
     
     m_commandBuffers.Resize( in_frames );
-    result = vkAllocateCommandBuffers( m_device, &allocInfo, &m_commandBuffers );
+    result = vkAllocateCommandBuffers( m_device->Device(), &allocInfo, &m_commandBuffers );
     if ( result != VK_SUCCESS ) 
     {   
         
-        crvkAppendError( "crvkPipelineCommand::Create::vkAllocateCommandBuffers", result );
+        crvkAppendError( "crvkGraphicPipelineExecutor::Create::vkAllocateCommandBuffers", result );
         return false;
     }
 
@@ -156,10 +220,10 @@ bool crvkPipelineCommand::Create(
 
 /*
 ==============================================
-crvkPipelineCommand::Destroy
+crvkGraphicPipelineExecutor::Destroy
 ==============================================
 */
-void crvkPipelineCommand::Destroy( void )
+void crvkGraphicPipelineExecutor::Destroy( void )
 {
     // release the command buffers 
     vkFreeCommandBuffers( m_device, m_commandPool, m_commandBuffers.Count(), &m_commandBuffers );
@@ -181,7 +245,7 @@ void crvkPipelineCommand::Destroy( void )
     m_commandPool = nullptr;
 }
 
-VkResult crvkPipelineCommand::Begin( const uint32_t in_frame, const VkRenderPass in_renderPass, const VkFramebuffer in_frameBuffer )
+VkResult crvkGraphicPipelineExecutor::Begin( const uint32_t in_frame, const VkRenderPass in_renderPass, const VkFramebuffer in_frameBuffer )
 {
     m_frame = in_frame;
     VkResult result = VK_SUCCESS;
@@ -209,14 +273,99 @@ VkResult crvkPipelineCommand::Begin( const uint32_t in_frame, const VkRenderPass
     vkCmdBeginRenderPass( m_commandBuffers[m_frame], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE );
     
     // bind pipeline to command buffer 
-    vkCmdBindPipeline( m_commandBuffers[m_frame], VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline );
+    vkCmdBindPipeline( m_commandBuffers[m_frame], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline );
 
     return VK_SUCCESS;
 }
 
-VkResult crvkPipelineCommand::End( void )
+VkResult crvkGraphicPipelineExecutor::End( void )
 {
     // finish registe commands 
     vkCmdEndRenderPass( m_commandBuffers[m_frame] );
     return vkEndCommandBuffer( m_commandBuffers[m_frame] );
+}
+
+void crvkGraphicPipelineExecutor::BindIndexBuffer( const VkBuffer in_indexBuffer, const VkDeviceSize in_offset, const VkIndexType in_indexType )
+{
+    // Memory barrier to ensure later visibility
+    VkBufferMemoryBarrier2 barrier;
+    barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
+
+    // we are coming from a copy operation
+    barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+    barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+        
+    // and going to a read operation by the raster
+    barrier.dstStageMask = VK_PIPELINE_STAGE_2_INDEX_INPUT_BIT;
+    barrier.dstAccessMask = VK_ACCESS_2_INDEX_READ_BIT;
+
+    // the source queue, and the destine queue ( currently ignored, may we assign in future )
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+    // buffers and ranges 
+    barrier.buffer = in_indexBuffer;
+    barrier.offset = in_offset;
+    barrier.size = VK_WHOLE_SIZE; 
+
+    //
+    VkDependencyInfo    dependencyInfo{};
+    dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    dependencyInfo.pNext = nullptr;
+    dependencyInfo.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+    dependencyInfo.memoryBarrierCount = 0;
+    dependencyInfo.pMemoryBarriers = nullptr;
+    dependencyInfo.bufferMemoryBarrierCount = 1;
+    dependencyInfo.pBufferMemoryBarriers = &barrier;
+    dependencyInfo.imageMemoryBarrierCount = 0;
+    dependencyInfo.pImageMemoryBarriers = nullptr;
+    vkCmdPipelineBarrier2( m_commandBuffers[m_frame], &dependencyInfo ); 
+
+    vkCmdBindIndexBuffer( m_commandBuffers[m_frame], in_indexBuffer, in_offset, in_indexType );
+}
+
+void crvkGraphicPipelineExecutor::BindVertexBuffers(const VkBuffer *in_vertexBuffers, const VkDeviceSize *in_offsets, const VkDeviceSize *in_sizes, const VkDeviceSize *in_strides, const uint32_t in_base, const uint32_t in_count)
+{
+    crvkDynamicVector<VkBufferMemoryBarrier2>   barriers;
+    barriers.Resize( in_count );
+    for ( uint32_t i = 0; i < in_count; i++)
+    {
+        // Memory barrier to ensure later visibility
+        VkBufferMemoryBarrier2 barrier;
+        barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
+
+        // we are coming from a copy operation
+        barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+        barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+        
+        // and going to a read operation by the shader
+        barrier.dstStageMask = VK_PIPELINE_STAGE_2_VERTEX_SHADER_BIT;
+        barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
+
+        // the source queue, and the destine queue ( currently ignored, may we assign in future )
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        
+        // buffers and ranges 
+        barrier.buffer = in_vertexBuffers[i];
+        barrier.offset = in_offsets[i];
+        barrier.size = in_sizes[i]; 
+        
+        barriers[i] = barrier;
+    }
+
+    //
+    VkDependencyInfo    dependencyInfo{};
+    dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    dependencyInfo.pNext = nullptr;
+    dependencyInfo.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+    dependencyInfo.memoryBarrierCount = 0;
+    dependencyInfo.pMemoryBarriers = nullptr;
+    dependencyInfo.bufferMemoryBarrierCount = barriers.Count();
+    dependencyInfo.pBufferMemoryBarriers = &barriers;
+    dependencyInfo.imageMemoryBarrierCount = 0;
+    dependencyInfo.pImageMemoryBarriers = nullptr;
+    vkCmdPipelineBarrier2( m_commandBuffers[m_frame], &dependencyInfo ); 
+
+    vkCmdBindVertexBuffers2( m_commandBuffers[m_frame], in_base, in_count, in_vertexBuffers, in_offsets, in_sizes, in_strides );
 }

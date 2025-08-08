@@ -22,31 +22,52 @@
 #ifndef __CRVK_PIPELINE_HPP__
 #define __CRVK_PIPELINE_HPP__
 
+/// @brief crvkGraphicPipeline is the most basic pipeline creation framework, 
+/// with simple abstraction that allows you to have full control over pipeline management.
 class crvkGraphicPipeline
 {
 public:
     crvkGraphicPipeline( void );
     ~crvkGraphicPipeline( void );
 
-    bool    Create( void );
+    bool    Create(         
+        const crvkDevice* in_device,
+        const uint32_t in_subpass,
+        const uint32_t in_setLayoutCount,
+        const VkDescriptorSetLayout* in_setLayouts,
+        const uint32_t in_pushConstantRangeCount,  
+        const VkPushConstantRange* in_pushConstantRanges,
+        const uint32_t in_stageCount,
+        const VkPipelineShaderStageCreateInfo* in_stagesCreateInfo,
+        const VkPipelineVertexInputStateCreateInfo* in_vertexInputStateCreateInfo,
+        const VkPipelineInputAssemblyStateCreateInfo* in_inputAssemblyStateCreateInfo,
+        const VkPipelineTessellationStateCreateInfo* in_tessellationStateCreateInfo,
+        const VkPipelineViewportStateCreateInfo* in_viewportStateCreateInfo,
+        const VkPipelineRasterizationStateCreateInfo* in_rasterizationStateCreateInfo,
+        const VkPipelineMultisampleStateCreateInfo* in_multisampleStateCreateInfo,
+        const VkPipelineDepthStencilStateCreateInfo* in_depthStencilStateCreateInfo,
+        const VkPipelineColorBlendStateCreateInfo* in_colorBlendStateCreateInfo,
+        const VkPipelineDynamicStateCreateInfo* in_dynamicStateCreateInfo,
+        const VkRenderPass in_renderPass,
+        const VkPipeline in_basePipelineHandle );
+
     void    Destroy( void );
 
     VkPipeline  Pipeline( void ) const { return m_pipeline; }
     
-private:
-    VkDevice                            m_device;
+protected:
+    crvkDevice*                         m_device;
     VkPipelineLayout                    m_pipelineLayout;
     VkPipeline                          m_pipeline;
 };
 
-///
-/// @brief crvkPipelineCommand, This is a complete pipeline whit his onw command buffer,
-/// for easy pipeline execution setup  
-class crvkPipelineCommand
+/// @brief crvkPipelineCommand is a complete pipeline structure, with its own buffers and command pools,
+/// semaphores organized and structured in order to register and execute in the simplest and most functional way possible.
+class crvkGraphicPipelineExecutor : public crvkGraphicPipeline
 {
 public:
-    crvkPipelineCommand( void );
-    ~crvkPipelineCommand( void );
+    crvkGraphicPipelineExecutor( void );
+    ~crvkGraphicPipelineExecutor( void );
 
     /// @brief Create the pipeline and comand record buffer 
     /// @param in_device 
@@ -71,7 +92,10 @@ public:
         const crvkDevice* in_device, 
         const uint32_t in_frames, 
         const uint32_t in_subpass,
-        const VkPipelineCreateFlags in_flags,
+        const uint32_t in_setLayoutCount,
+        const VkDescriptorSetLayout* in_setLayouts,
+        const uint32_t in_pushConstantRangeCount,  
+        const VkPushConstantRange* in_pushConstantRanges,
         const uint32_t in_stageCount,
         const VkPipelineShaderStageCreateInfo* in_stagesCreateInfo,
         const VkPipelineVertexInputStateCreateInfo* in_vertexInputStateCreateInfo,
@@ -105,13 +129,7 @@ public:
     /// @brief 
     /// @param in_indexBuffer 
     /// @param in_offset 
-    void        BindIndexBuffer( const VkBuffer in_indexBuffer, const VkDeviceSize in_offset );
-    
-    /// @brief 
-    /// @param in_vertexBuffers 
-    /// @param in_offsets 
-    /// @param in_count 
-    void        BindVertexBuffers( const VkBuffer* in_vertexBuffers, const VkDeviceSize* in_offsets, const uint32_t in_count );
+    void        BindIndexBuffer( const VkBuffer in_indexBuffer, const VkDeviceSize in_offset, const VkIndexType in_indexType );
     
     /// @brief 
     /// @param in_vertexBuffers 
@@ -119,7 +137,7 @@ public:
     /// @param in_sizes 
     /// @param in_strides 
     /// @param in_count 
-    void        BindVertexBuffersRange( const VkBuffer* in_vertexBuffers, const VkDeviceSize* in_offsets, const VkDeviceSize* in_sizes, const VkDeviceSize* in_strides, const uint32_t in_count );
+    void        BindVertexBuffers( const VkBuffer* in_vertexBuffers, const VkDeviceSize* in_offsets, const VkDeviceSize* in_sizes, const VkDeviceSize* in_strides, const uint32_t in_base, const uint32_t in_count );
     
     /// @brief 
     /// @param in_instanceCount 
@@ -140,13 +158,9 @@ public:
 
 private:
     uint32_t                            m_frame;
-    VkIndexType                         m_indexType;
     VkClearValue                        m_clearColor;
     VkRect2D                            m_renderArea;
-    VkDevice                            m_device;
     VkCommandPool                       m_commandPool;
-    VkPipelineLayout                    m_pipelineLayout;
-    VkPipeline                          m_graphicsPipeline;
     crvkDynamicVector<VkCommandBuffer>  m_commandBuffers;
 };
 
