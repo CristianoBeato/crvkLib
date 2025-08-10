@@ -899,3 +899,626 @@ bool crvkCommandBufferRoundRobin::End(
 
     return true;
 }
+
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::SetViewport
+==============================================
+*/
+void crvkCommandBufferRoundRobin::SetViewport( const uint32_t in_firstViewport, const uint32_t in_viewportCount, const VkViewport *in_viewports ) const
+{
+    vkCmdSetViewport( m_commandBuffers[m_currentBuffer], in_firstViewport, in_viewportCount, in_viewports );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::SetScissor
+==============================================
+*/
+void crvkCommandBufferRoundRobin::SetScissor( const uint32_t in_firstScissor, const uint32_t in_scissorCount, const VkRect2D *in_scissors ) const
+{
+    vkCmdSetScissor( m_commandBuffers[m_currentBuffer], in_firstScissor, in_scissorCount, in_scissors );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::SetLineWidth
+==============================================
+*/
+void crvkCommandBufferRoundRobin::SetLineWidth( const float in_lineWidth ) const
+{
+    vkCmdSetLineWidth( m_commandBuffers[m_currentBuffer], in_lineWidth );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::SetDepthBias
+==============================================
+*/
+void crvkCommandBufferRoundRobin::SetDepthBias( const float in_depthBiasConstantFactor, const float in_depthBiasClamp, const float in_depthBiasSlopeFactor ) const
+{
+    vkCmdSetDepthBias( m_commandBuffers[m_currentBuffer], in_depthBiasConstantFactor, in_depthBiasClamp, in_depthBiasSlopeFactor );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::SetBlendConstants
+==============================================
+*/
+void crvkCommandBufferRoundRobin::SetBlendConstants(const float in_blendConstants[4]) const
+{
+    vkCmdSetBlendConstants( m_commandBuffers[m_currentBuffer], in_blendConstants );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::SetBlendConstants
+==============================================
+*/
+void crvkCommandBufferRoundRobin::SetDepthBounds( const float in_minDepthBounds, const float in_maxDepthBounds ) const
+{
+    vkCmdSetDepthBounds( m_commandBuffers[m_currentBuffer], in_minDepthBounds, in_maxDepthBounds );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::SetCullMode
+==============================================
+*/
+void crvkCommandBufferRoundRobin::SetCullMode( const VkCullModeFlags in_cullMode ) const
+{
+    vkCmdSetCullMode( m_commandBuffers[m_currentBuffer], in_cullMode );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::SetStencilCompareMask
+==============================================
+*/
+void crvkCommandBufferRoundRobin::SetStencilCompareMask( const VkStencilFaceFlags in_faceMask, const uint32_t in_compareMask ) const
+{
+    vkCmdSetStencilCompareMask( m_commandBuffers[m_currentBuffer], in_faceMask, in_compareMask );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::SetStencilWriteMask
+==============================================
+*/
+void crvkCommandBufferRoundRobin::SetStencilWriteMask( const VkStencilFaceFlags in_faceMask, const uint32_t in_writeMask ) const
+{
+    vkCmdSetStencilWriteMask( m_commandBuffers[m_currentBuffer], in_faceMask, in_writeMask );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::SetStencilReference
+==============================================
+*/
+void crvkCommandBufferRoundRobin::SetStencilReference( const VkStencilFaceFlags in_faceMask, const uint32_t in_reference ) const
+{
+    vkCmdSetStencilReference( m_commandBuffers[m_currentBuffer], in_faceMask, in_reference );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::BindDescriptorSets
+==============================================
+*/
+void crvkCommandBufferRoundRobin::BindDescriptorSets( const VkPipelineBindPoint in_pipelineBindPoint, 
+                                            const VkPipelineLayout in_layout, 
+                                            const uint32_t in_firstSet, 
+                                            const uint32_t in_descriptorSetCount, 
+                                            const VkDescriptorSet* in_descriptorSets, 
+                                            const uint32_t in_dynamicOffsetCount, 
+                                            const uint32_t *in_dynamicOffsets )
+{
+    vkCmdBindDescriptorSets( m_commandBuffers[m_currentBuffer], in_pipelineBindPoint, in_layout, in_firstSet, in_descriptorSetCount, in_descriptorSets, in_dynamicOffsetCount, in_dynamicOffsets );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::BindIndexBuffer
+==============================================
+*/
+void crvkCommandBufferRoundRobin::BindIndexBuffer( const VkBuffer in_buffer, const VkDeviceSize in_offset, const VkIndexType in_indexType ) const
+{
+    vkCmdBindIndexBuffer( m_commandBuffers[m_currentBuffer], in_buffer, in_offset, in_indexType );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::BindVertexBuffers
+==============================================
+*/
+void crvkCommandBufferRoundRobin::BindVertexBuffers(  const uint32_t in_firstBinding, 
+                                            const uint32_t in_bindingCount, 
+                                            const VkBuffer *in_buffers, 
+                                            const VkDeviceSize *in_offsets, 
+                                            const VkDeviceSize* in_sizes,
+                                            const VkDeviceSize* in_strides
+                                        ) const
+{
+
+
+    vkCmdBindVertexBuffers2( m_commandBuffers[m_currentBuffer], in_firstBinding, in_bindingCount, in_buffers, in_offsets, in_sizes, in_strides );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::Draw
+==============================================
+*/
+void crvkCommandBufferRoundRobin::Draw(   const uint32_t in_vertexCount, 
+                                const uint32_t in_instanceCount, 
+                                const uint32_t in_firstVertex, 
+                                const uint32_t in_firstInstance ) const
+{
+    vkCmdDraw( m_commandBuffers[m_currentBuffer], in_vertexCount, in_instanceCount, in_firstVertex, in_firstInstance );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::DrawIndexed
+==============================================
+*/
+void crvkCommandBufferRoundRobin::DrawIndexed( const uint32_t in_indexCount, 
+                                     const uint32_t in_instanceCount, 
+                                     const uint32_t in_firstIndex, 
+                                     const int32_t in_vertexOffset, 
+                                     const uint32_t in_firstInstance ) const
+{
+    vkCmdDrawIndexed( m_commandBuffers[m_currentBuffer], in_indexCount, in_instanceCount, in_firstIndex, in_vertexOffset, in_firstInstance );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::DrawIndirect
+==============================================
+*/
+void crvkCommandBufferRoundRobin::DrawIndirect(   const VkBuffer in_buffer, 
+                                        const VkDeviceSize in_offset, 
+                                        const uint32_t in_drawCount, 
+                                        const uint32_t in_stride )  const
+{
+    vkCmdDrawIndirect( m_commandBuffers[m_currentBuffer], in_buffer , in_offset, in_drawCount, in_stride );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::DrawIndexedIndirect
+==============================================
+*/
+void crvkCommandBufferRoundRobin::DrawIndexedIndirect(    const VkBuffer in_buffer, 
+                                                const VkDeviceSize in_offset, 
+                                                const uint32_t in_drawCount, 
+                                                const uint32_t in_stride ) const
+{
+    vkCmdDrawIndexedIndirect( m_commandBuffers[m_currentBuffer], in_buffer, in_offset, in_drawCount, in_stride );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::Dispatch
+==============================================
+*/
+void crvkCommandBufferRoundRobin::Dispatch(   const uint32_t in_groupCountX, 
+                                    const uint32_t in_groupCountY, 
+                                    const uint32_t in_groupCountZ ) const
+{
+    vkCmdDispatch( m_commandBuffers[m_currentBuffer], in_groupCountX, in_groupCountY, in_groupCountZ );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::DispatchIndirect
+==============================================
+*/
+void crvkCommandBufferRoundRobin::DispatchIndirect(   const VkBuffer in_buffer, 
+                                            const VkDeviceSize in_offset )  const
+{
+    vkCmdDispatchIndirect( m_commandBuffers[m_currentBuffer], in_buffer, in_offset );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::CopyBuffer
+==============================================
+*/
+void crvkCommandBufferRoundRobin::CopyBuffer( const VkBuffer in_srcBuffer, 
+                                    const VkBuffer in_dstBuffer, 
+                                    const uint32_t in_regionCount, 
+                                    const VkBufferCopy2 *in_regions, 
+                                    const void* in_next ) const
+{
+    VkCopyBufferInfo2   copyBufferInfo{};
+    copyBufferInfo.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
+    copyBufferInfo.srcBuffer = in_srcBuffer;
+    copyBufferInfo.dstBuffer = in_dstBuffer;
+    copyBufferInfo.regionCount = in_regionCount;
+    copyBufferInfo.pRegions = in_regions;
+    copyBufferInfo.pNext = in_next;
+    vkCmdCopyBuffer2( m_commandBuffers[m_currentBuffer], &copyBufferInfo );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::CopyImage
+==============================================
+*/
+void crvkCommandBufferRoundRobin::CopyImage(  const VkImage in_srcImage, 
+                                    const VkImageLayout in_srcImageLayout, 
+                                    const VkImage in_dstImage, 
+                                    const VkImageLayout in_dstImageLayout, 
+                                    const uint32_t in_regionCount, 
+                                    const VkImageCopy2 *in_regions,
+                                    const void* in_next ) const
+{
+    VkCopyImageInfo2    copyImageInfo{};
+    copyImageInfo.sType = VK_STRUCTURE_TYPE_COPY_IMAGE_INFO_2;
+    copyImageInfo.srcImage = in_srcImage;
+    copyImageInfo.srcImageLayout = in_srcImageLayout;
+    copyImageInfo.dstImage = in_dstImage;
+    copyImageInfo.dstImageLayout = in_dstImageLayout;
+    copyImageInfo.regionCount = in_regionCount;
+    copyImageInfo.pRegions = in_regions;
+    copyImageInfo.pNext = in_next;
+    vkCmdCopyImage2( m_commandBuffers[m_currentBuffer], &copyImageInfo );   
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::BlitImage
+==============================================
+*/
+void crvkCommandBufferRoundRobin::BlitImage(  const VkImage in_srcImage, 
+                                    const VkImageLayout in_srcImageLayout, 
+                                    const VkImage in_dstImage, 
+                                    const VkImageLayout in_dstImageLayout, 
+                                    const uint32_t in_regionCount, 
+                                    const VkImageBlit2 *in_regions, 
+                                    const VkFilter in_filter, 
+                                    const void* in_next ) const
+{
+    VkBlitImageInfo2    blitImageInfo{};
+    blitImageInfo.sType = VK_STRUCTURE_TYPE_BLIT_IMAGE_INFO_2;
+    blitImageInfo.srcImage = in_srcImage;
+    blitImageInfo.srcImageLayout = in_srcImageLayout;
+    blitImageInfo.dstImage = in_dstImage;
+    blitImageInfo.dstImageLayout = in_dstImageLayout;
+    blitImageInfo.regionCount = in_regionCount;
+    blitImageInfo.pRegions = in_regions;
+    blitImageInfo.filter = in_filter;
+    blitImageInfo.pNext = in_next;
+    vkCmdBlitImage2( m_commandBuffers[m_currentBuffer], &blitImageInfo );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::CopyBufferToImage
+==============================================
+*/
+void crvkCommandBufferRoundRobin::CopyBufferToImage(  const VkBuffer in_srcBuffer, 
+                                            const VkImage in_dstImage, 
+                                            const VkImageLayout in_dstImageLayout, 
+                                            const uint32_t in_regionCount, 
+                                            const VkBufferImageCopy2 *in_regions,
+                                            const void* in_next ) const
+{
+    VkCopyBufferToImageInfo2 copyBufferToImageInfo{};
+    copyBufferToImageInfo.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
+    copyBufferToImageInfo.srcBuffer = in_srcBuffer;
+    copyBufferToImageInfo.dstImage = in_dstImage;
+    copyBufferToImageInfo.dstImageLayout = in_dstImageLayout;
+    copyBufferToImageInfo.regionCount = in_regionCount;
+    copyBufferToImageInfo.pRegions = in_regions;
+    copyBufferToImageInfo.pNext = in_next;
+    vkCmdCopyBufferToImage2( m_commandBuffers[m_currentBuffer], &copyBufferToImageInfo );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::CopyImageToBuffer
+==============================================
+*/
+void crvkCommandBufferRoundRobin::CopyImageToBuffer(  const VkImage in_srcImage, 
+                                            const VkImageLayout in_srcImageLayout, 
+                                            const VkBuffer in_dstBuffer, 
+                                            const uint32_t in_regionCount, 
+                                            const VkBufferImageCopy2 *in_regions,
+                                            const void* in_next ) const
+{
+    VkCopyImageToBufferInfo2 copyImageToBufferInfo{};
+    copyImageToBufferInfo.sType = VK_STRUCTURE_TYPE_COPY_IMAGE_TO_BUFFER_INFO_2;
+    copyImageToBufferInfo.srcImage = in_srcImage;
+    copyImageToBufferInfo.srcImageLayout = in_srcImageLayout;
+    copyImageToBufferInfo.dstBuffer = in_dstBuffer;
+    copyImageToBufferInfo.regionCount = in_regionCount;
+    copyImageToBufferInfo.pRegions = in_regions;
+    copyImageToBufferInfo.pNext = in_next;
+    vkCmdCopyImageToBuffer2( m_commandBuffers[m_currentBuffer], &copyImageToBufferInfo );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::UpdateBuffer
+==============================================
+*/
+void crvkCommandBufferRoundRobin::UpdateBuffer(   const VkBuffer in_dstBuffer, 
+                                        const VkDeviceSize in_dstOffset, 
+                                        const VkDeviceSize in_dataSize, 
+                                        const void *in_data ) const
+{
+    vkCmdUpdateBuffer( m_commandBuffers[m_currentBuffer], in_dstBuffer, in_dstOffset, in_dataSize, in_data );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::FillBuffer
+==============================================
+*/
+void crvkCommandBufferRoundRobin::FillBuffer( const VkBuffer in_dstBuffer, 
+                                    const VkDeviceSize in_dstOffset, 
+                                    const VkDeviceSize in_size, 
+                                    const uint32_t in_data ) const
+{
+    vkCmdFillBuffer( m_commandBuffers[m_currentBuffer], in_dstBuffer, in_dstOffset, in_size, in_data );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::ClearColorImage
+==============================================
+*/
+void crvkCommandBufferRoundRobin::ClearColorImage( const VkImage in_image, 
+                                         const VkImageLayout in_imageLayout, 
+                                         const VkClearColorValue *in_color, 
+                                         const uint32_t in_rangeCount, 
+                                         const VkImageSubresourceRange *in_ranges ) const
+{
+    vkCmdClearColorImage( m_commandBuffers[m_currentBuffer], in_image, in_imageLayout, in_color, in_rangeCount, in_ranges );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::ClearDepthStencilImage
+==============================================
+*/
+void crvkCommandBufferRoundRobin::ClearDepthStencilImage( const VkImage in_image, 
+                                                const VkImageLayout in_imageLayout, 
+                                                const VkClearDepthStencilValue *in_depthStencil, 
+                                                const uint32_t in_rangeCount, 
+                                                const VkImageSubresourceRange *in_ranges ) const
+{
+    vkCmdClearDepthStencilImage( m_commandBuffers[m_currentBuffer], in_image, in_imageLayout, in_depthStencil, in_rangeCount, in_ranges );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::ResolveImage
+==============================================
+*/
+void crvkCommandBufferRoundRobin::ResolveImage(   const VkImage in_srcImage,
+                                        const VkImageLayout in_srcImageLayout,
+                                        const VkImage in_dstImage,
+                                        const VkImageLayout in_dstImageLayout,
+                                        const uint32_t in_regionCount,
+                                        const VkImageResolve2* in_regions, 
+                                        const void* in_next ) const
+{
+    VkResolveImageInfo2 resolveImageInfo{};
+    resolveImageInfo.sType = VK_STRUCTURE_TYPE_RESOLVE_IMAGE_INFO_2;
+    resolveImageInfo.srcImage = in_srcImage;
+    resolveImageInfo.srcImageLayout = in_srcImageLayout;
+    resolveImageInfo.dstImage = in_dstImage;
+    resolveImageInfo.dstImageLayout = in_dstImageLayout;
+    resolveImageInfo.regionCount = in_regionCount;
+    resolveImageInfo.pRegions = in_regions;
+    resolveImageInfo.pNext = in_next;
+    vkCmdResolveImage2( m_commandBuffers[m_currentBuffer], &resolveImageInfo );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::ExecuteCommands
+==============================================
+*/
+void crvkCommandBufferRoundRobin::ExecuteCommands( const uint32_t in_commandBufferCount, const VkCommandBuffer *in_commandBuffers) const
+{
+    vkCmdExecuteCommands( m_commandBuffers[m_currentBuffer], in_commandBufferCount, in_commandBuffers );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::ClearAttachments
+==============================================
+*/
+void crvkCommandBufferRoundRobin::ClearAttachments(   const uint32_t in_attachmentCount, 
+                                            const VkClearAttachment *in_attachments, 
+                                            const uint32_t in_rectCount, 
+                                            const VkClearRect *in_rects ) const
+{
+    vkCmdClearAttachments( m_commandBuffers[m_currentBuffer], in_attachmentCount, in_attachments, in_rectCount, in_rects );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::BeginRenderPass
+==============================================
+*/
+void crvkCommandBufferRoundRobin::BeginRenderPass(
+    const VkRenderPass in_renderPass,
+    const VkFramebuffer in_framebuffer,
+    const VkRect2D in_renderArea,
+    const uint32_t in_clearValueCount,
+    const VkClearValue *in_clearValues,
+    const VkSubpassContents in_contents ) const
+{
+    VkRenderPassBeginInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = in_renderPass;
+    renderPassInfo.framebuffer = in_framebuffer;
+    renderPassInfo.renderArea = in_renderArea;
+    renderPassInfo.clearValueCount = in_clearValueCount;
+    renderPassInfo.pClearValues = in_clearValues;
+
+    vkCmdBeginRenderPass( m_commandBuffers[m_currentBuffer], &renderPassInfo, in_contents );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::EndRenderPass
+==============================================
+*/
+void crvkCommandBufferRoundRobin::EndRenderPass( void ) const
+{
+    vkCmdEndRenderPass( m_commandBuffers[m_currentBuffer] );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::BindPipeline
+==============================================
+*/
+void crvkCommandBufferRoundRobin::BindPipeline( const VkPipelineBindPoint in_pipelineBindPoint, const VkPipeline in_pipeline ) const
+{
+    vkCmdBindPipeline( m_commandBuffers[m_currentBuffer], in_pipelineBindPoint, in_pipeline );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::PipelineBarrier
+==============================================
+*/
+void crvkCommandBufferRoundRobin::PipelineBarrier(    const VkDependencyFlags in_dependencyFlags, 
+                                            const uint32_t in_memoryBarrierCount, 
+                                            const VkMemoryBarrier2 *in_memoryBarriers, 
+                                            const uint32_t in_bufferMemoryBarrierCount, 
+                                            const VkBufferMemoryBarrier2 *in_bufferMemoryBarriers, 
+                                            const uint32_t in_imageMemoryBarrierCount, 
+                                            const VkImageMemoryBarrier2 *in_imageMemoryBarriers, 
+                                            const void *in_nex ) const
+{
+    VkDependencyInfo dependencyInfo{};
+    dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    dependencyInfo.dependencyFlags = in_dependencyFlags;
+    dependencyInfo.memoryBarrierCount = in_memoryBarrierCount;
+    dependencyInfo.pMemoryBarriers = in_memoryBarriers;
+    dependencyInfo.bufferMemoryBarrierCount = in_bufferMemoryBarrierCount;
+    dependencyInfo.pBufferMemoryBarriers = in_bufferMemoryBarriers;
+    dependencyInfo.imageMemoryBarrierCount = in_imageMemoryBarrierCount;
+    dependencyInfo.pImageMemoryBarriers = in_imageMemoryBarriers;
+    dependencyInfo.pNext = nullptr;
+    vkCmdPipelineBarrier2( m_commandBuffers[m_currentBuffer], &dependencyInfo );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::WaitEvents
+==============================================
+*/
+void crvkCommandBufferRoundRobin::WaitEvents( const uint32_t in_eventCount,
+                                    const VkEvent* in_events, 
+                                    const VkDependencyFlags in_dependencyFlags,
+                                    const uint32_t in_memoryBarrierCount,
+                                    const VkMemoryBarrier2* in_memoryBarriers,
+                                    const uint32_t in_bufferMemoryBarrierCount,
+                                    const VkBufferMemoryBarrier2* in_bufferMemoryBarriers,
+                                    const uint32_t in_imageMemoryBarrierCount,
+                                    const VkImageMemoryBarrier2* in_imageMemoryBarriers,
+                                    const void* in_next ) const
+{
+    VkDependencyInfo dependencyInfo{};
+    dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+    dependencyInfo.dependencyFlags = in_dependencyFlags;
+    dependencyInfo.memoryBarrierCount = in_memoryBarrierCount;
+    dependencyInfo.pMemoryBarriers = in_memoryBarriers;
+    dependencyInfo.bufferMemoryBarrierCount = in_bufferMemoryBarrierCount;
+    dependencyInfo.pBufferMemoryBarriers = in_bufferMemoryBarriers; 
+    dependencyInfo.imageMemoryBarrierCount = in_imageMemoryBarrierCount;
+    dependencyInfo.pImageMemoryBarriers = in_imageMemoryBarriers;
+    dependencyInfo.pNext = in_next;
+    vkCmdWaitEvents2( m_commandBuffers[m_currentBuffer], in_eventCount, in_events, &dependencyInfo );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::SetEvent
+==============================================
+*/
+void crvkCommandBufferRoundRobin::SetEvent(const VkEvent in_event, const VkPipelineStageFlags in_stageMask ) const
+{
+    // TODO: vkCmdSetEvent2
+    vkCmdSetEvent( m_commandBuffers[m_currentBuffer], in_event, in_stageMask );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::ResetEvent
+==============================================
+*/
+void crvkCommandBufferRoundRobin::ResetEvent(const VkEvent in_event, const VkPipelineStageFlags in_stageMask ) const
+{
+    vkCmdResetEvent( m_commandBuffers[m_currentBuffer], in_event, in_stageMask );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::PushConstants
+==============================================
+*/
+void crvkCommandBufferRoundRobin::PushConstants( const VkPipelineLayout in_layout, const VkShaderStageFlags in_stageFlags, const uint32_t in_offset, const uint32_t in_size, const void *in_values ) const
+{
+    vkCmdPushConstants( m_commandBuffers[m_currentBuffer], in_layout, in_stageFlags, in_offset, in_size, in_values );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::CopyQueryPoolResults
+==============================================
+*/
+void crvkCommandBufferRoundRobin::CopyQueryPoolResults( const VkQueryPool in_queryPool, const uint32_t in_firstQuery, const uint32_t in_queryCount, const VkBuffer in_dstBuffer, const VkDeviceSize in_dstOffset, const VkDeviceSize in_stride, const VkQueryResultFlags in_flags ) const
+{
+    vkCmdCopyQueryPoolResults( m_commandBuffers[m_currentBuffer], in_queryPool, in_firstQuery, in_queryCount, in_dstBuffer, in_dstOffset, in_stride, in_flags );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::WriteTimestamp
+==============================================
+*/
+void crvkCommandBufferRoundRobin::WriteTimestamp( const VkPipelineStageFlagBits in_pipelineStage, const VkQueryPool in_queryPool, const uint32_t in_query ) const
+{
+    vkCmdWriteTimestamp( m_commandBuffers[m_currentBuffer], in_pipelineStage, in_queryPool, in_query );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::BeginQuery
+==============================================
+*/
+void crvkCommandBufferRoundRobin::BeginQuery( const VkQueryPool in_queryPool, const uint32_t in_query, const VkQueryControlFlags in_flags ) const
+{
+    vkCmdBeginQuery( m_commandBuffers[m_currentBuffer], in_queryPool, in_query, in_flags );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::ResetQueryPool
+==============================================
+*/
+void crvkCommandBufferRoundRobin::ResetQueryPool( const VkQueryPool in_queryPool, const uint32_t in_firstQuery, const uint32_t in_queryCount ) const
+{
+    vkCmdResetQueryPool( m_commandBuffers[m_currentBuffer], in_queryPool, in_firstQuery, in_queryCount ); 
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::EndQuery
+==============================================
+*/
+void crvkCommandBufferRoundRobin::EndQuery( const VkQueryPool in_queryPool, const uint32_t in_query ) const
+{
+    vkCmdEndQuery( m_commandBuffers[m_currentBuffer], in_queryPool,  in_query );
+}
