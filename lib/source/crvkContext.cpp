@@ -24,6 +24,9 @@
 #include "crvkPrecompiled.hpp"
 #include "crvkContext.hpp"
 
+// eppend exts 
+// VK_KHR_synchronization2
+
 /*
 ==============================================
 crvkContext::crvkContext

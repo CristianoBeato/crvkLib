@@ -47,7 +47,6 @@ VkResult crvkDeviceQueue::Submit(
     submitInfo.pCommandBufferInfos = in_CommandBufferInfos;
     submitInfo.signalSemaphoreInfoCount = in_signalSemaphoreInfoCount;
     submitInfo.pSignalSemaphoreInfos = in_SignalSemaphoreInfos;
-
     return vkQueueSubmit2( m_queue, 1, &submitInfo, in_fence );
 }
 
@@ -179,10 +178,10 @@ crvkDevice::crvkDevice( void ) :
     m_logicalDevice( nullptr ),
     m_context( nullptr )
 {
-    m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_GRAPHICS] = nullptr;
-    m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_PRESENT] = nullptr;
-    m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_COMPUTE] = nullptr;
-    m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_TRANSFER] = nullptr;
+    m_queues[CRVK_DEVICE_QUEUE_GRAPHICS] = nullptr;
+    m_queues[CRVK_DEVICE_QUEUE_PRESENT] = nullptr;
+    m_queues[CRVK_DEVICE_QUEUE_COMPUTE] = nullptr;
+    m_queues[CRVK_DEVICE_QUEUE_TRANSFER] = nullptr;
 }
 
 /*
@@ -370,7 +369,7 @@ uint32_t crvkDevice::FindMemoryType( const uint32_t typeFilter, const VkMemoryPr
 crvkDevice::GetQueue
 ==============================================
 */
-crvkDeviceQueue* crvkDevice::GetQueue( const crvkDeviceQueue::crvkQueueType in_type ) const
+crvkDeviceQueue* crvkDevice::GetQueue( const crvkQueueType in_type ) const
 {
     int i = (int)in_type;
 
@@ -389,7 +388,7 @@ crvkDevice::HasPresentQueue
 */
 bool crvkDevice::HasPresentQueue(void) const
 {
-    return m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_PRESENT];
+    return m_queues[CRVK_DEVICE_QUEUE_PRESENT];
 }
 
 /*
@@ -399,7 +398,7 @@ crvkDevice::HasComputeQueue
 */
 bool crvkDevice::HasComputeQueue(void) const
 {
-    return m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_COMPUTE];
+    return m_queues[CRVK_DEVICE_QUEUE_COMPUTE];
 }
 
 /*
@@ -409,7 +408,7 @@ crvkDevice::HasTransferQueue
 */
 bool crvkDevice::HasTransferQueue(void) const
 {
-    return m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_TRANSFER];
+    return m_queues[CRVK_DEVICE_QUEUE_TRANSFER];
 }
 
 /*
@@ -657,82 +656,82 @@ void crvkDevice::FindQueues( crvkDynamicVector<VkDeviceQueueCreateInfo> &queueCr
             auto q = m_queueFamilies[j];
             switch ( i )
             {
-            case crvkDeviceQueue::CRVK_DEVICE_QUEUE_GRAPHICS:
+            case CRVK_DEVICE_QUEUE_GRAPHICS:
             {
                 // already in use, try the next one
-                if ( ( m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_PRESENT] != nullptr ) && m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_PRESENT]->Family() == j )
+                if ( ( m_queues[CRVK_DEVICE_QUEUE_PRESENT] != nullptr ) && m_queues[CRVK_DEVICE_QUEUE_PRESENT]->Family() == j )
                     continue;
 
-                if ( ( m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_COMPUTE] != nullptr ) && m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_COMPUTE]->Family() == j )
+                if ( ( m_queues[CRVK_DEVICE_QUEUE_COMPUTE] != nullptr ) && m_queues[CRVK_DEVICE_QUEUE_COMPUTE]->Family() == j )
                     continue;
 
-                if ( ( m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_TRANSFER] != nullptr ) && m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_TRANSFER]->Family() == j )
+                if ( ( m_queues[CRVK_DEVICE_QUEUE_TRANSFER] != nullptr ) && m_queues[CRVK_DEVICE_QUEUE_TRANSFER]->Family() == j )
                     continue;
                 
                 // if we don't have availabe queues 
                 if ( !( q.queueFlags & VK_QUEUE_GRAPHICS_BIT ) || !( queueCount[j] < q.queueCount ) )
                     continue;
 
-                m_queues[i] = new crvkDeviceQueue( j, queueCount[j]++, (crvkDeviceQueue::crvkQueueType)i );
+                m_queues[i] = new crvkDeviceQueue( j, queueCount[j]++, (crvkQueueType)i );
             } break;
             
-            case crvkDeviceQueue::CRVK_DEVICE_QUEUE_PRESENT:
+            case CRVK_DEVICE_QUEUE_PRESENT:
             {                
                 vkGetPhysicalDeviceSurfaceSupportKHR( m_physicalDevice, j, m_context->Surface(), &canPresent );
 
                 // already in use, try the next one
-                if ( ( m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_GRAPHICS] != nullptr ) && m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_GRAPHICS]->Family() == j )
+                if ( ( m_queues[CRVK_DEVICE_QUEUE_GRAPHICS] != nullptr ) && m_queues[CRVK_DEVICE_QUEUE_GRAPHICS]->Family() == j )
                     continue;
 
-                if ( ( m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_COMPUTE] != nullptr ) && m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_COMPUTE]->Family() == j )
+                if ( ( m_queues[CRVK_DEVICE_QUEUE_COMPUTE] != nullptr ) && m_queues[CRVK_DEVICE_QUEUE_COMPUTE]->Family() == j )
                     continue;
 
-                if ( ( m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_TRANSFER] != nullptr ) && m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_TRANSFER]->Family() == j )
+                if ( ( m_queues[CRVK_DEVICE_QUEUE_TRANSFER] != nullptr ) && m_queues[CRVK_DEVICE_QUEUE_TRANSFER]->Family() == j )
                     continue;
 
                 if( !canPresent || !( queueCount[j] < q.queueCount ) )
                     continue;
 
-                m_queues[i] = new crvkDeviceQueue( j, queueCount[j]++, (crvkDeviceQueue::crvkQueueType)i );                
+                m_queues[i] = new crvkDeviceQueue( j, queueCount[j]++, (crvkQueueType)i );                
             } break;
 
-            case crvkDeviceQueue::CRVK_DEVICE_QUEUE_COMPUTE:
+            case CRVK_DEVICE_QUEUE_COMPUTE:
             {
 
                 // already in use, try the next one
-                if ( ( m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_GRAPHICS] != nullptr ) && m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_GRAPHICS]->Family() == j )
+                if ( ( m_queues[CRVK_DEVICE_QUEUE_GRAPHICS] != nullptr ) && m_queues[CRVK_DEVICE_QUEUE_GRAPHICS]->Family() == j )
                     continue;
 
-                if ( ( m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_PRESENT] != nullptr ) && m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_PRESENT]->Family() == j )
+                if ( ( m_queues[CRVK_DEVICE_QUEUE_PRESENT] != nullptr ) && m_queues[CRVK_DEVICE_QUEUE_PRESENT]->Family() == j )
                     continue;
 
-                if ( ( m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_TRANSFER] != nullptr ) && m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_TRANSFER]->Family() == j )
+                if ( ( m_queues[CRVK_DEVICE_QUEUE_TRANSFER] != nullptr ) && m_queues[CRVK_DEVICE_QUEUE_TRANSFER]->Family() == j )
                     continue;
             
                 // if we don't have availabe queues 
                 if ( !( q.queueFlags & VK_QUEUE_COMPUTE_BIT ) || !( queueCount[j] < q.queueCount ) )
                     continue;
 
-                m_queues[i] = new crvkDeviceQueue( j, queueCount[j]++, (crvkDeviceQueue::crvkQueueType)i );
+                m_queues[i] = new crvkDeviceQueue( j, queueCount[j]++, (crvkQueueType)i );
             } break;
 
-            case crvkDeviceQueue::CRVK_DEVICE_QUEUE_TRANSFER:
+            case CRVK_DEVICE_QUEUE_TRANSFER:
             {
                 // already in use, try the next one
-                if ( ( m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_GRAPHICS] != nullptr ) && m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_GRAPHICS]->Family() == j )
+                if ( ( m_queues[CRVK_DEVICE_QUEUE_GRAPHICS] != nullptr ) && m_queues[CRVK_DEVICE_QUEUE_GRAPHICS]->Family() == j )
                     continue;
 
-                if ( ( m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_COMPUTE] != nullptr ) && m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_COMPUTE]->Family() == j )
+                if ( ( m_queues[CRVK_DEVICE_QUEUE_COMPUTE] != nullptr ) && m_queues[CRVK_DEVICE_QUEUE_COMPUTE]->Family() == j )
                     continue;
 
-                if ( ( m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_PRESENT] != nullptr ) && m_queues[crvkDeviceQueue::CRVK_DEVICE_QUEUE_PRESENT]->Family() == j )
+                if ( ( m_queues[CRVK_DEVICE_QUEUE_PRESENT] != nullptr ) && m_queues[CRVK_DEVICE_QUEUE_PRESENT]->Family() == j )
                     continue;
             
                 // if we don't have availabe queues 
                 if ( !( q.queueFlags & VK_QUEUE_TRANSFER_BIT ) || !( queueCount[j] < q.queueCount ) )
                     continue;
 
-                m_queues[i] = new crvkDeviceQueue( j, queueCount[j]++, (crvkDeviceQueue::crvkQueueType)i );
+                m_queues[i] = new crvkDeviceQueue( j, queueCount[j]++, (crvkQueueType)i );
             } break;
             }      
         }
@@ -743,7 +742,7 @@ void crvkDevice::FindQueues( crvkDynamicVector<VkDeviceQueueCreateInfo> &queueCr
             auto q = m_queueFamilies[j];
             switch ( i )
             {
-            case crvkDeviceQueue::CRVK_DEVICE_QUEUE_GRAPHICS:
+            case CRVK_DEVICE_QUEUE_GRAPHICS:
             {
                 // already found 
                 if ( m_queues[i] != nullptr )
@@ -753,9 +752,9 @@ void crvkDevice::FindQueues( crvkDynamicVector<VkDeviceQueueCreateInfo> &queueCr
                 if ( !( q.queueFlags & VK_QUEUE_GRAPHICS_BIT ) || !( queueCount[j] < q.queueCount ) )
                     continue;
 
-                m_queues[i] = new crvkDeviceQueue( j, queueCount[j]++, (crvkDeviceQueue::crvkQueueType)i );
+                m_queues[i] = new crvkDeviceQueue( j, queueCount[j]++, (crvkQueueType)i );
             } break;
-            case crvkDeviceQueue::CRVK_DEVICE_QUEUE_PRESENT:
+            case CRVK_DEVICE_QUEUE_PRESENT:
             {
                 // already found 
                 if ( m_queues[i] != nullptr )
@@ -765,9 +764,9 @@ void crvkDevice::FindQueues( crvkDynamicVector<VkDeviceQueueCreateInfo> &queueCr
                 if ( !canPresent || !( queueCount[j] < q.queueCount ) )    
                     continue;
 
-                m_queues[i] = new crvkDeviceQueue( j, queueCount[j]++, (crvkDeviceQueue::crvkQueueType)i );
+                m_queues[i] = new crvkDeviceQueue( j, queueCount[j]++, (crvkQueueType)i );
             } break;
-            case crvkDeviceQueue::CRVK_DEVICE_QUEUE_COMPUTE:
+            case CRVK_DEVICE_QUEUE_COMPUTE:
             {
                 // already found 
                 if ( m_queues[i] != nullptr )
@@ -777,10 +776,10 @@ void crvkDevice::FindQueues( crvkDynamicVector<VkDeviceQueueCreateInfo> &queueCr
                 if ( !( q.queueFlags & VK_QUEUE_COMPUTE_BIT ) || !( queueCount[j] < q.queueCount ) )
                     continue;
 
-                m_queues[i] = new crvkDeviceQueue( j, queueCount[j]++, (crvkDeviceQueue::crvkQueueType)i );
+                m_queues[i] = new crvkDeviceQueue( j, queueCount[j]++, (crvkQueueType)i );
 
             } break;
-            case crvkDeviceQueue::CRVK_DEVICE_QUEUE_TRANSFER:
+            case CRVK_DEVICE_QUEUE_TRANSFER:
             {
                 // already found 
                 if ( m_queues[i] != nullptr )
@@ -790,7 +789,7 @@ void crvkDevice::FindQueues( crvkDynamicVector<VkDeviceQueueCreateInfo> &queueCr
                 if ( !( q.queueFlags & VK_QUEUE_TRANSFER_BIT ) || !( queueCount[j] < q.queueCount ) )
                     continue;
 
-                m_queues[i] = new crvkDeviceQueue( j, queueCount[j]++, (crvkDeviceQueue::crvkQueueType)i );
+                m_queues[i] = new crvkDeviceQueue( j, queueCount[j]++, (crvkQueueType)i );
             } break;
             
             default:

@@ -283,10 +283,9 @@ bool crvkSpirVProgram::Create( const crvkDevice* in_device, const VkShaderStageF
     for ( uint32_t i = 0; i < m_stages.Count(); i++)
     {
         // configure shader stage
-        auto &stage = m_stages[i];
-        stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        stage.stage = in_stage[i];
-        stage.pName = k_GLSL_SHADER_ENTRY_POINT;   
+        m_stages[i].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        m_stages[i].stage = in_stage[i];
+        m_stages[i].pName = k_GLSL_SHADER_ENTRY_POINT;   
         
         // create the shader module
         VkShaderModuleCreateInfo shaderModuleCI{};

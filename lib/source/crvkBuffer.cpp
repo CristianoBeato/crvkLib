@@ -190,6 +190,7 @@ crvkBufferStatic::Create
 bool crvkBufferStatic::Create( const crvkDevice* in_device, const size_t in_size, const VkBufferUsageFlags in_usage, const VkMemoryPropertyFlags in_flags )
 {
     VkResult result = VK_SUCCESS;
+    crvkDeviceQueue* queue = nullptr;
     VkDevice device = nullptr; 
     m_device = const_cast<crvkDevice*>( in_device );
     device = in_device->Device();
@@ -229,6 +230,28 @@ bool crvkBufferStatic::Create( const crvkDevice* in_device, const size_t in_size
         return false;
     }
 
+    ///
+    if( m_device->HasTransferQueue() )
+        queue = m_device->GetQueue( CRVK_DEVICE_QUEUE_TRANSFER );
+    else
+        queue = m_device->GetQueue( CRVK_DEVICE_QUEUE_TRANSFER );
+
+    ///
+    /// Create command buffer  
+    /// ==========================================================================
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.pNext = nullptr;
+    allocInfo.commandPool = queue->CommandPool(); // get the command pool form available queue 
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount = 1;
+    result = vkAllocateCommandBuffers(device, &allocInfo, &m_commandBuffer ); 
+    if ( result != VK_SUCCESS )
+    {
+        crvkAppendError( "crvkBufferStatic::Create::vkAllocateCommandBuffers", result );
+        return false;
+    }
+
     return true;
 }
 
@@ -245,9 +268,9 @@ void crvkBufferStatic::Destroy( void )
     if ( m_commandBuffer != nullptr )
     {
         if ( m_device->HasComputeQueue() )
-            vkFreeCommandBuffers( device, m_device->GetQueue(crvkDeviceQueue::CRVK_DEVICE_QUEUE_TRANSFER)->CommandPool(), 1, &m_commandBuffer );
+            vkFreeCommandBuffers( device, m_device->GetQueue(CRVK_DEVICE_QUEUE_TRANSFER)->CommandPool(), 1, &m_commandBuffer );
         else
-            vkFreeCommandBuffers( device, m_device->GetQueue(crvkDeviceQueue::CRVK_DEVICE_QUEUE_GRAPHICS)->CommandPool(), 1, &m_commandBuffer );
+            vkFreeCommandBuffers( device, m_device->GetQueue(CRVK_DEVICE_QUEUE_GRAPHICS)->CommandPool(), 1, &m_commandBuffer );
             
         m_commandBuffer = nullptr;
     }
@@ -332,9 +355,9 @@ void crvkBufferStatic::CopyFromBuffer( const VkBuffer in_srcBuffer, const VkBuff
     };
 
     if ( m_device->HasTransferQueue() )
-        queue = m_device->GetQueue( crvkDeviceQueue::CRVK_DEVICE_QUEUE_TRANSFER );
+        queue = m_device->GetQueue( CRVK_DEVICE_QUEUE_TRANSFER );
     else
-        queue = m_device->GetQueue( crvkDeviceQueue::CRVK_DEVICE_QUEUE_GRAPHICS );       
+        queue = m_device->GetQueue( CRVK_DEVICE_QUEUE_GRAPHICS );       
 
     result = queue->Submit( waitInfo, 2, &commandBufferSubmitInfo, 1, &signalInfo, 1, nullptr );
     if( result != VK_SUCCESS )
@@ -422,9 +445,9 @@ void crvkBufferStatic::CopyToBuffer( const VkBuffer in_dstBuffer, const VkBuffer
     waitInfo[1] = WaitLastUse(); // wait for last copy end 
 
     if ( m_device->HasTransferQueue() )
-        queue = m_device->GetQueue( crvkDeviceQueue::CRVK_DEVICE_QUEUE_TRANSFER );
+        queue = m_device->GetQueue( CRVK_DEVICE_QUEUE_TRANSFER );
     else
-        queue = m_device->GetQueue( crvkDeviceQueue::CRVK_DEVICE_QUEUE_GRAPHICS );
+        queue = m_device->GetQueue( CRVK_DEVICE_QUEUE_GRAPHICS );
 
     queue->Submit( waitInfo, 2, &commandBufferSubmitInfo, 1, &signalInfo, 1, nullptr );
 }
@@ -511,8 +534,8 @@ bool crvkBufferStaging::Create( const crvkDevice* in_device, const size_t in_siz
         return false;
 
     // get queues 
-    graphics = m_device->GetQueue( crvkDeviceQueue::CRVK_DEVICE_QUEUE_GRAPHICS );
-    tranfer = m_device->GetQueue( crvkDeviceQueue::CRVK_DEVICE_QUEUE_TRANSFER );
+    graphics = m_device->GetQueue( CRVK_DEVICE_QUEUE_GRAPHICS );
+    tranfer = m_device->GetQueue( CRVK_DEVICE_QUEUE_TRANSFER );
     device = m_device->Device();
 
     //

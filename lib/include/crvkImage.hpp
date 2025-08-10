@@ -110,6 +110,6 @@ public:
 private:
     VkBuffer        m_staging;
     VkDeviceMemory  m_memoryStaging;
-}
+};
 
 #endif // __CRVK_IMAGE_HPP__

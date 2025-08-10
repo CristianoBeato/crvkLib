@@ -22,23 +22,25 @@
 #ifndef __CRVK_DEVICE_HPP__
 #define __CRVK_DEVICE_HPP__
 
-typedef struct
+typedef struct crvkDeviceSuportedFeatures_t
 {
     bool timelineSemaphore = false;
     bool copyCommands2Enabled = false;
 } crvkDeviceSuportedFeatures_t;
 
+typedef enum crvkQueueType
+{
+    CRVK_DEVICE_QUEUE_NONE = -1,
+    CRVK_DEVICE_QUEUE_GRAPHICS,
+    CRVK_DEVICE_QUEUE_PRESENT,
+    CRVK_DEVICE_QUEUE_COMPUTE,
+    CRVK_DEVICE_QUEUE_TRANSFER
+} crvkQueueType;
+
 class crvkDeviceQueue
 {
 public:
-    typedef enum crvkQueueType
-    {
-        CRVK_DEVICE_QUEUE_NONE = -1,
-        CRVK_DEVICE_QUEUE_GRAPHICS,
-        CRVK_DEVICE_QUEUE_PRESENT,
-        CRVK_DEVICE_QUEUE_COMPUTE,
-        CRVK_DEVICE_QUEUE_TRANSFER
-    } crvkQueueType;
+
 
     VkResult Submit( 
                     const VkSemaphoreSubmitInfo* in_waitSemaphoreInfos,
@@ -109,7 +111,7 @@ public:
 
     VkPhysicalDevice            PhysicalDevice( void ) const { return m_physicalDevice; }    
     VkDevice                    Device( void ) const { return m_logicalDevice; }
-    crvkDeviceQueue*            GetQueue( const crvkDeviceQueue::crvkQueueType in_type ) const;
+    crvkDeviceQueue*            GetQueue( const crvkQueueType in_type ) const;
     bool                        HasPresentQueue( void ) const;
     bool                        HasComputeQueue( void ) const;
     bool                        HasTransferQueue( void ) const;
