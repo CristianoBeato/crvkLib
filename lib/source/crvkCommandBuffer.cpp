@@ -143,6 +143,11 @@ void crvkCommandBuffer::SetDepthBounds( const float in_minDepthBounds, const flo
     vkCmdSetDepthBounds( m_commandBuffer, in_minDepthBounds, in_maxDepthBounds );
 }
 
+void crvkCommandBuffer::SetCullMode( const VkCullModeFlags in_cullMode ) const
+{
+    vkCmdSetCullMode( m_commandBuffer, in_cullMode );
+}
+
 /*
 ==============================================
 crvkCommandBuffer::SetStencilCompareMask
@@ -693,4 +698,204 @@ crvkCommandBuffer::EndQuery
 void crvkCommandBuffer::EndQuery( const VkQueryPool in_queryPool, const uint32_t in_query ) const
 {
     vkCmdEndQuery( m_commandBuffer, in_queryPool,  in_query );
+}
+
+// ===================================================================================================================================================
+crvkCommandBufferRoundRobin::crvkCommandBufferRoundRobin( void ) :
+    m_numBuffers( 0 ),
+    m_currentBuffer( 0 ),
+    m_timelineValue( 0 ),
+    m_commandBuffers( 0 ),
+    m_doneSemaphore( 0 ),
+    m_device( 0 )
+{
+}
+
+crvkCommandBufferRoundRobin::~crvkCommandBufferRoundRobin( void )
+{
+}
+
+bool crvkCommandBufferRoundRobin::Create( const crvkDevice *in_device, const crvkDeviceQueue *in_queue, const uint32_t in_bufferCount )
+{
+    VkResult result = VK_SUCCESS;
+    m_device = const_cast<crvkDevice*>( in_device );
+    m_queue = const_cast<crvkDeviceQueue*>( in_queue );
+    m_numBuffers = in_bufferCount;
+
+    VkCommandBufferAllocateInfo commandBufferAL{};
+    commandBufferAL.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    commandBufferAL.pNext = nullptr;
+    commandBufferAL.commandPool = m_queue->CommandPool();
+    commandBufferAL.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    commandBufferAL.commandBufferCount = m_numBuffers;
+    result = vkAllocateCommandBuffers( m_device->Device(), &commandBufferAL, m_commandBuffers );
+    if( result != VK_SUCCESS )
+    {
+        crvkAppendError( "crvkCommandBufferRoundRobin::Create::vkAllocateCommandBuffers", result );
+        return false;
+    }
+
+    ///
+    /// Create semaphores 
+    /// ==========================================================================
+    VkSemaphoreTypeCreateInfo timelineCreateInfo{};
+    timelineCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
+    timelineCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+    timelineCreateInfo.initialValue = 0;
+
+    VkSemaphoreCreateInfo semaphoreCI{};
+    semaphoreCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    semaphoreCI.flags = 0;
+    semaphoreCI.pNext = &timelineCreateInfo;
+    result = vkCreateSemaphore( m_device->Device(), &semaphoreCI, k_allocationCallbacks, &m_doneSemaphore );
+    if ( result != VK_SUCCESS )
+    {
+        crvkAppendError( "crvkCommandBufferRoundRobin::Create::vkCreateSemaphore::COPY", result );
+        return false;
+    }
+
+    return true;
+}
+
+void crvkCommandBufferRoundRobin::Destroy( void )
+{
+    if( m_doneSemaphore != nullptr )
+    {
+        vkDestroySemaphore( m_device->Device(), m_doneSemaphore, k_allocationCallbacks );
+        m_doneSemaphore = nullptr;
+    }
+
+    if ( m_commandBuffers != nullptr )
+    {
+        vkFreeCommandBuffers( m_device->Device(), m_queue->CommandPool(), m_numBuffers, m_commandBuffers );
+        m_commandBuffers = nullptr;
+    }
+
+    m_queue = nullptr;
+    m_device = nullptr;
+}
+
+bool crvkCommandBufferRoundRobin::Begin( const VkCommandBufferResetFlags in_resetFlags, const VkCommandBufferUsageFlags in_usageFlags, const bool in_waitFinish ) const
+{
+    VkResult result = VK_SUCCESS;
+
+    // wait we finish last frame before begin this
+    if ( in_waitFinish )
+    {
+        VkSemaphoreWaitInfo waitInfo{};
+        waitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
+        waitInfo.pNext = nullptr;
+        waitInfo.flags = 0; // 0 = espera qualquer um (ALL), pode ser VK_SEMAPHORE_WAIT_ANY_BIT
+        waitInfo.semaphoreCount = 1;
+        waitInfo.pSemaphores = &m_doneSemaphore,
+        waitInfo.pValues = &m_timelineValue;
+
+        // Espera até o semáforo atingir waitValue ou mais
+        result = vkWaitSemaphores( m_device->Device(), &waitInfo, UINT64_MAX ); // UINT64_MAX = espera infinita
+        //if (result == VK_SUCCESS) 
+        //{
+        //    printf("Timeline atingiu o valor %llu\n", waitValue);
+        //} 
+        //if (result == VK_TIMEOUT) 
+        //{
+        //    printf("Timeout!\n");
+        //}
+    }
+
+    result = vkResetCommandBuffer( m_commandBuffers[m_currentBuffer], in_resetFlags );
+    if( result != VK_SUCCESS )
+    {
+        crvkAppendError( "crvkCommandBufferRoundRobin::Begin::vkResetCommandBuffer", result );
+        return false;
+    }
+
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = in_usageFlags;
+    result = vkBeginCommandBuffer( m_commandBuffers[m_currentBuffer], &beginInfo );
+}
+
+bool crvkCommandBufferRoundRobin::End( 
+    const VkSemaphoreSubmitInfo* in_waitInfo,
+    const uint32_t in_waitInfoCount,
+    const VkSemaphoreSubmitInfo* in_singalInfo,
+    const uint32_t in_singalInfoCount,
+    const VkFence in_fence, 
+    const bool in_waitFinish )
+{
+    VkResult result = VK_SUCCESS;
+    uint64_t waitValue = m_timelineValue++; // last wait value 
+
+    crvkDynamicVector<VkSemaphoreSubmitInfo> waitArray;
+    if( in_waitInfoCount > 0 )
+    {
+        waitArray.Resize( in_waitInfoCount );
+        std::memcpy( &waitArray, in_waitInfo, sizeof( VkSemaphoreSubmitInfo ) *  in_waitInfoCount );
+    }
+
+    crvkDynamicVector<VkSemaphoreSubmitInfo> signalArray;
+    if( in_singalInfoCount > 0 )
+    {
+        signalArray.Resize( in_singalInfoCount );
+        std::memcpy( &signalArray, in_singalInfo, sizeof( VkSemaphoreSubmitInfo ) *  in_singalInfoCount );
+    }
+
+    // end register commands
+    result = vkEndCommandBuffer( m_commandBuffers[m_numBuffers] );
+    if ( result != VK_SUCCESS )
+    {
+        crvkAppendError("crvkCommandBufferRoundRobin::End::vkEndCommandBuffer", result ); 
+        return false;
+    }
+    
+    // Wait por semaphore
+    VkTimelineSemaphoreSubmitInfo timeWait{};
+    timeWait.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO;
+    timeWait.waitSemaphoreValueCount = 0;
+    timeWait.pWaitSemaphoreValues = nullptr;
+    timeWait.signalSemaphoreValueCount = 1;
+    timeWait.pSignalSemaphoreValues = &waitValue;
+    
+    VkSemaphoreSubmitInfo wait{};
+    wait.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    wait.pNext = &timeWait;
+    waitArray.Append( wait );
+    
+    // signal Semaphore
+    VkTimelineSemaphoreSubmitInfo timeSignal{};
+    timeSignal.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO;
+    timeSignal.waitSemaphoreValueCount = 0;
+    timeSignal.pWaitSemaphoreValues = nullptr;
+    timeSignal.signalSemaphoreValueCount = 1;
+    timeSignal.pSignalSemaphoreValues = &m_timelineValue;
+
+    VkSemaphoreSubmitInfo signal{};
+    signal.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    signal.pNext = &timeSignal;
+    signalArray.Append( signal );
+
+    //
+    VkCommandBufferSubmitInfo commandBufferSubmit{};
+    commandBufferSubmit.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+    commandBufferSubmit.pNext = nullptr;
+    commandBufferSubmit.commandBuffer = m_commandBuffers[m_currentBuffer];
+    commandBufferSubmit.deviceMask = 0;
+
+    //
+    VkSubmitInfo2 submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+    submitInfo.waitSemaphoreInfoCount = waitArray.Count();
+    submitInfo.pWaitSemaphoreInfos = &waitArray;
+    submitInfo.commandBufferInfoCount = 1;
+    submitInfo.pCommandBufferInfos = &commandBufferSubmit;
+    submitInfo.signalSemaphoreInfoCount = signalArray.Count();
+    submitInfo.pSignalSemaphoreInfos = &signalArray;
+    result = vkQueueSubmit2( m_queue->Queue(), 1, &submitInfo, in_fence );
+    if ( result != VK_SUCCESS )
+    {
+        crvkAppendError("crvkCommandBufferRoundRobin::End::vkEndCommandBuffer", result ); 
+        return false;
+    }
+
+    return true;
 }

@@ -52,6 +52,8 @@ public:
 
     void SetDepthBounds( const float in_minDepthBounds, const float in_maxDepthBounds ) const;
 
+    void SetCullMode( const VkCullModeFlags in_cullMode ) const;
+
     void SetStencilCompareMask( const VkStencilFaceFlags in_faceMask, const uint32_t in_compareMask ) const;
 
     void SetStencilWriteMask( const VkStencilFaceFlags in_faceMask, const uint32_t in_writeMask ) const;
@@ -263,5 +265,43 @@ private:
 
 };
 
+class crvkCommandBufferRoundRobin
+{
+private:
+    uint32_t            m_numBuffers;
+    uint32_t            m_currentBuffer;
+    uint64_t            m_timelineValue;
+    VkCommandBuffer*    m_commandBuffers;
+    VkSemaphore         m_doneSemaphore;
+    crvkDevice*         m_device;
+    crvkDeviceQueue*    m_queue;
+
+public:
+    crvkCommandBufferRoundRobin( void );
+    ~crvkCommandBufferRoundRobin( void );
+
+    bool        Create( const crvkDevice* in_device, const crvkDeviceQueue* in_queue, const uint32_t in_bufferCount );
+    void        Destroy( void );
+
+    //
+    bool        Begin( const VkCommandBufferResetFlags in_resetFlags, const VkCommandBufferUsageFlags in_usageFlags, const bool in_waitFinish = false ) const;
+
+    /// @brief 
+    /// @param  
+    /// @return 
+    bool    End( 
+        const VkSemaphoreSubmitInfo* in_waitInfo,
+        const uint32_t in_waitInfoCount,
+        const VkSemaphoreSubmitInfo* in_singalInfo,
+        const uint32_t in_singalInfoCount,
+        const VkFence in_fence, 
+        const bool in_waitFinish = false );
+
+    void SetViewport( const uint32_t in_firstViewport, const uint32_t in_viewportCount, const VkViewport* in_viewports ) const;
+
+    void SetScissor( const uint32_t in_firstScissor, const uint32_t in_scissorCount, const VkRect2D* in_scissors ) const;
+
+    void SetCullMode( const VkCullModeFlags in_cullMode ) const;
+};
 
 #endif //__CRVK_COMMAND_BUFFER_HPP__
