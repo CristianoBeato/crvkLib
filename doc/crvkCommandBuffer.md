@@ -40,8 +40,7 @@ While the sent buffer is awaiting execution, the system moves on to preparing th
 This design allows command recording for the next frame to begin immediately after sending the previous one, keeping the CPU and GPU working in parallel with minimal latency.
 ```mermaid
 classDiagram
-    class crvkCommandBufferRoundRobin 
-    {
+    class crvkCommandBufferRoundRobin {
         - uint32_t m_numBuffers;
         - uint32_t m_currentBuffer;
         - uint64_t m_timelineValue;
