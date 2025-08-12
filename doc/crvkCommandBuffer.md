@@ -23,7 +23,9 @@ Assim que a gravação termina, o buffer é enviado para execução na GPU via m
 O timeline semaphore é sinalizado com um novo valor (m_timelineValue), marcando o ponto de sincronização para quando a GPU concluir esse trabalho.
 Enquanto o buffer enviado está aguardando execução, o sistema já avança para preparar o próximo buffer, evitando ociosidade e mantendo alta taxa de renderização.
 Esse design permite que o registro de comandos do próximo frame comece imediatamente após enviar o anterior, mantendo a CPU e a GPU trabalhando em paralelo com mínima latência.
+
 /
+
 This structure manages a set of Vulkan command buffers organized in a round-robin fashion to continuously record rendering commands without blocking execution.
 It maintains:
 A chain of command buffers (m_commandBuffers) that are used cyclically.
