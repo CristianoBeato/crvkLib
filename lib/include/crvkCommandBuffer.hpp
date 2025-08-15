@@ -232,6 +232,14 @@ public:
         const VkClearValue* in_clearValues,
         const VkSubpassContents in_contents ) const;
 
+    void    BeginRenderPass( 
+        const crvkFrameBuffer* in_frameBuffer,
+        const VkRect2D in_renderArea,
+        const uint32_t in_clearValueCount,
+        const VkClearValue* in_clearValues,
+        const VkSubpassContents in_contents
+    ) const;
+
     /// @brief 
     /// @param  
     void        EndRenderPass( void ) const;
@@ -473,6 +481,14 @@ public:
         const VkClearValue* in_clearValues,
         const VkSubpassContents in_contents ) const;
 
+    void    BeginRenderPass( 
+        const crvkFrameBuffer* in_frameBuffer,
+        const VkRect2D in_renderArea,
+        const uint32_t in_clearValueCount,
+        const VkClearValue* in_clearValues,
+        const VkSubpassContents in_contents
+    ) const;
+
     void        EndRenderPass( void ) const;
 
     void        BindPipeline( const VkPipelineBindPoint in_pipelineBindPoint, const VkPipeline in_pipeline ) const;
@@ -490,8 +506,8 @@ private:
     uint32_t            m_numBuffers;
     uint32_t            m_currentBuffer;
     uint64_t            m_timelineValue;
-    VkCommandBuffer*    m_commandBuffers;
     VkSemaphore         m_doneSemaphore;
+    VkCommandBuffer*    m_commandBuffers;
     crvkDevice*         m_device;
     crvkDeviceQueue*    m_queue;
 };

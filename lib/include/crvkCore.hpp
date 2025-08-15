@@ -90,14 +90,16 @@ class crvkPointer;
 //#include "crvkDynamicVector.hpp"
 #include "crvkException.hpp"
 #include "crvkContext.hpp"
+#include "crvkFormat.hpp"
 #include "crvkDevice.hpp"
 #include "crvkFence.hpp"
-#include "crvkCommandBuffer.hpp"
 #include "crvkSemaphore.hpp"
 #include "crvkSwapchain.hpp"
 #include "crvkBuffer.hpp"
 #include "crvkImage.hpp"
+#include "crvkFrameBuffer.hpp"
 #include "crvkShaderStage.hpp"
+#include "crvkCommandBuffer.hpp"
 #include "crvkPipeline.hpp"
 
 #endif //__CRVK_IMPLEMENTATION_HPP__

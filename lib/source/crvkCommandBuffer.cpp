@@ -545,6 +545,23 @@ void crvkCommandBuffer::BeginRenderPass(
 
 /*
 ==============================================
+crvkCommandBuffer::BeginRenderPass
+==============================================
+*/
+void crvkCommandBuffer::BeginRenderPass(const crvkFrameBuffer *in_frameBuffer, const VkRect2D in_renderArea, const uint32_t in_clearValueCount, const VkClearValue *in_clearValues, const VkSubpassContents in_contents) const
+{
+    VkRenderPassBeginInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = in_frameBuffer->RenderPass();
+    renderPassInfo.framebuffer = in_frameBuffer->Framebuffer();
+    renderPassInfo.renderArea = in_renderArea;
+    renderPassInfo.clearValueCount = in_clearValueCount;
+    renderPassInfo.pClearValues = in_clearValues;
+    vkCmdBeginRenderPass( m_commandBuffer, &renderPassInfo, in_contents );
+}
+
+/*
+==============================================
 crvkCommandBuffer::EndRenderPass
 ==============================================
 */
@@ -792,14 +809,10 @@ bool crvkCommandBufferRoundRobin::Begin( const VkCommandBufferResetFlags in_rese
 
         // Espera até o semáforo atingir waitValue ou mais
         result = vkWaitSemaphores( m_device->Device(), &waitInfo, UINT64_MAX ); // UINT64_MAX = espera infinita
-        //if (result == VK_SUCCESS) 
-        //{
-        //    printf("Timeline atingiu o valor %llu\n", waitValue);
-        //} 
-        //if (result == VK_TIMEOUT) 
-        //{
-        //    printf("Timeout!\n");
-        //}
+        if ( result != VK_SUCCESS && result != VK_TIMEOUT );
+        {
+            //TODO:
+        } 
     }
 
     result = vkResetCommandBuffer( m_commandBuffers[m_currentBuffer], in_resetFlags );
@@ -824,8 +837,13 @@ bool crvkCommandBufferRoundRobin::End(
     const bool in_waitFinish )
 {
     VkResult result = VK_SUCCESS;
-    uint64_t waitValue = m_timelineValue++; // last wait value 
+    // get the next frame 
+    uint64_t waitValue = m_timelineValue + m_numBuffers; // Counter N + C
+    
+    // the current timelive value 
+    uint64_t signalValue = m_timelineValue++; // counter N
 
+    //
     crvkDynamicVector<VkSemaphoreSubmitInfo> waitArray;
     if( in_waitInfoCount > 0 )
     {
@@ -854,7 +872,7 @@ bool crvkCommandBufferRoundRobin::End(
     timeWait.waitSemaphoreValueCount = 0;
     timeWait.pWaitSemaphoreValues = nullptr;
     timeWait.signalSemaphoreValueCount = 1;
-    timeWait.pSignalSemaphoreValues = &waitValue;
+    timeWait.pSignalSemaphoreValues = &waitValue; // wait N + C
     
     VkSemaphoreSubmitInfo wait{};
     wait.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
@@ -867,7 +885,7 @@ bool crvkCommandBufferRoundRobin::End(
     timeSignal.waitSemaphoreValueCount = 0;
     timeSignal.pWaitSemaphoreValues = nullptr;
     timeSignal.signalSemaphoreValueCount = 1;
-    timeSignal.pSignalSemaphoreValues = &m_timelineValue;
+    timeSignal.pSignalSemaphoreValues = &signalValue; // singal N
 
     VkSemaphoreSubmitInfo signal{};
     signal.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
@@ -895,6 +913,30 @@ bool crvkCommandBufferRoundRobin::End(
     {
         crvkAppendError("crvkCommandBufferRoundRobin::End::vkEndCommandBuffer", result ); 
         return false;
+    }
+
+    // flip buffer
+    // wait we finish last frame before begin this
+    if ( in_waitFinish )
+    {
+        VkSemaphoreWaitInfo waitInfo{};
+        waitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
+        waitInfo.pNext = nullptr;
+        waitInfo.flags = 0; // 0 = espera qualquer um (ALL), pode ser VK_SEMAPHORE_WAIT_ANY_BIT
+        waitInfo.semaphoreCount = 1;
+        waitInfo.pSemaphores = &m_doneSemaphore,
+        waitInfo.pValues = &m_timelineValue;
+
+        // Espera até o semáforo atingir waitValue ou mais
+        result = vkWaitSemaphores( m_device->Device(), &waitInfo, UINT64_MAX ); // UINT64_MAX = espera infinita
+        //if (result == VK_SUCCESS) 
+        //{
+        //    printf("Timeline atingiu o valor %llu\n", waitValue);
+        //} 
+        //if (result == VK_TIMEOUT) 
+        //{
+        //    printf("Timeout!\n");
+        //}
     }
 
     return true;
@@ -1363,6 +1405,28 @@ void crvkCommandBufferRoundRobin::BeginRenderPass(
     renderPassInfo.clearValueCount = in_clearValueCount;
     renderPassInfo.pClearValues = in_clearValues;
 
+    vkCmdBeginRenderPass( m_commandBuffers[m_currentBuffer], &renderPassInfo, in_contents );
+}
+
+/*
+==============================================
+crvkCommandBufferRoundRobin::BeginRenderPass
+==============================================
+*/
+void crvkCommandBufferRoundRobin::BeginRenderPass(
+    const crvkFrameBuffer* in_frameBuffer,
+    const VkRect2D in_renderArea,
+    const uint32_t in_clearValueCount,
+    const VkClearValue *in_clearValues,
+    const VkSubpassContents in_contents ) const
+{
+    VkRenderPassBeginInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = in_frameBuffer->RenderPass();
+    renderPassInfo.framebuffer = in_frameBuffer->Framebuffer();
+    renderPassInfo.renderArea = in_renderArea;
+    renderPassInfo.clearValueCount = in_clearValueCount;
+    renderPassInfo.pClearValues = in_clearValues;
     vkCmdBeginRenderPass( m_commandBuffers[m_currentBuffer], &renderPassInfo, in_contents );
 }
 
