@@ -50,21 +50,33 @@ public:
     /// @param  
     virtual void    Destroy( void );
 
+    VkResult        AcquireImage( void );
+
+    /// @brief This will present to screen
+    /// @return 
+    VkResult    PresentImage( const VkSemaphore* in_waitSemaphores, const uint32_t in_waitSemaphoresCount );
+
     /// @brief Return the swapchain frame buffer count 
     const VkImage*      Images( void ) const;
     const VkImageView*  ImageViews( void ) const;
+    const VkImage       CurrentImage( void ) const { return m_images[m_currentImage]; }
+    const VkImageView   CurrentImageView( void ) const { return m_imageViews[m_currentImage]; }
     uint32_t            ImageCount( void ) const { return m_imageCount; }
+    uint32_t            CurrentImageID( void ) const { return m_imageCount; }
 
     /// @brief Return the swapchain handle 
     VkSwapchainKHR      Swapchain( void ) const { return m_swapChain; }
 
 protected:
     uint32_t                        m_imageCount;   // total swapchain images 
+    uint32_t                        m_currentImage;   // current frame buffer
     VkExtent2D                      m_extent;
     VkSwapchainKHR                  m_swapChain;
     crvkDevice*                     m_device;
     crvkDynamicVector<VkImage>      m_images;
     crvkDynamicVector<VkImageView>  m_imageViews;
+    crvkDynamicVector<VkSemaphore>  m_imageAvailable;
+
 };
 
 class crvkSwapchainDynamic : public crvkSwapchain
@@ -116,10 +128,8 @@ public:
     uint32_t    CurrentFrame( void ) const { return m_frame; }
  
 private:
-    uint32_t                            m_imageIndex;   // current frame buffer
     uint32_t                            m_frameCount;   // number of concurrent frames
     uint32_t                            m_frame;
-    crvkDynamicVector<VkSemaphore>      m_imageAvailable;
     crvkDynamicVector<VkSemaphore>      m_renderFinished;
     crvkDynamicVector<VkCommandBuffer>  m_commandBuffers;
 };

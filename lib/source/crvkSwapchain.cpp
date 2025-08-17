@@ -122,41 +122,61 @@ bool crvkSwapchain::Create(
     vkGetSwapchainImagesKHR( device, m_swapChain, &m_imageCount, &m_images );
     
     m_imageViews.Resize( m_imageCount );
+    m_imageAvailable.Resize( m_imageCount );
+
+    VkSemaphoreCreateInfo semaphoreInfo{};
+    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    VkImageViewCreateInfo createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    createInfo.format = in_surfaceformat.format;
+    createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+    createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+    createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+    createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+    createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    createInfo.subresourceRange.baseMipLevel = 0;
+    createInfo.subresourceRange.levelCount = 1;
+    createInfo.subresourceRange.baseArrayLayer = 0;
+    createInfo.subresourceRange.layerCount = 1;
+
     for ( uint32_t i = 0; i < m_imageCount; i++) 
     {
-        VkImageViewCreateInfo createInfo{};
-        createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        createInfo.image = m_images[i];
-        createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        createInfo.format = in_surfaceformat.format;
-        createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        createInfo.subresourceRange.baseMipLevel = 0;
-        createInfo.subresourceRange.levelCount = 1;
-        createInfo.subresourceRange.baseArrayLayer = 0;
-        createInfo.subresourceRange.layerCount = 1;
-
+    
         // destroy old view 
         if ( in_recreate )
             vkDestroyImageView( device, m_imageViews[i], k_allocationCallbacks );
-        
+    
+        createInfo.image = m_images[i];    
         result = vkCreateImageView( device, &createInfo, k_allocationCallbacks, &m_imageViews[i] ); 
         if ( result != VK_SUCCESS ) 
         {
             crvkAppendError( "crvkSwapchainDynamic::Create::vkCreateImageView", result );
             return false;
         }
+
+        result = vkCreateSemaphore( m_device->Device(), &semaphoreInfo, k_allocationCallbacks, &m_imageAvailable[i] ); 
+        if( result != VK_SUCCESS )
+        {
+            crvkAppendError( "crvkSwapchainDynamic::Create::vkCreateSemaphore", result );
+            return false;
+        }
+
     }
 }
 
+/*
+==============================================
+crvkSwapchain::Destroy
+==============================================
+*/
 void crvkSwapchain::Destroy( void )
 {
     // release buffers and images 
     for ( uint32_t i = 0; i < m_imageCount; i++)
     {
+        vkDestroySemaphore( m_device->Device(), m_imageAvailable[i], k_allocationCallbacks );
         vkDestroyImageView( m_device->Device(), m_imageViews[i], k_allocationCallbacks );
     }
 
@@ -172,11 +192,63 @@ void crvkSwapchain::Destroy( void )
     m_device = nullptr;
 }
 
+/*
+==============================================
+crvkSwapchain::AcquireImage
+==============================================
+*/
+VkResult crvkSwapchain::AcquireImage( void )
+{    
+    //
+    // Aquire the current frame image idex
+    //
+    VkAcquireNextImageInfoKHR   acquireNextImageInfo{};
+    acquireNextImageInfo.sType = VK_STRUCTURE_TYPE_ACQUIRE_NEXT_IMAGE_INFO_KHR;
+    acquireNextImageInfo.pNext = nullptr;
+    acquireNextImageInfo.swapchain = Swapchain();
+    acquireNextImageInfo.timeout = UINT64_MAX;
+    acquireNextImageInfo.semaphore = m_imageAvailable[m_currentImage];
+    acquireNextImageInfo.fence = nullptr;
+    acquireNextImageInfo.deviceMask = 0;
+    return vkAcquireNextImage2KHR( m_device->Device(), &acquireNextImageInfo, &m_currentImage );
+}
+
+/*
+==============================================
+crvkSwapchain::PresentImage
+==============================================
+*/
+VkResult crvkSwapchain::PresentImage( const VkSemaphore* in_waitSemaphores, const uint32_t in_waitSemaphoresCount )
+{
+    VkResult result = VK_SUCCESS;
+    auto present = m_device->GetQueue( CRVK_DEVICE_QUEUE_PRESENT ); // get the present queue
+
+    // present to the window
+    present->Present( &m_swapChain, &m_currentImage, 1, in_waitSemaphores, in_waitSemaphoresCount );
+
+    // Signals acquisition of the next image (now that it has been presented)
+    VkSemaphoreSignalInfo signalAcquire{};
+    signalAcquire.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO;
+    signalAcquire.semaphore = m_imageAvailable[m_currentImage];
+    signalAcquire.value = 0;
+    vkSignalSemaphore( m_device->Device(), &signalAcquire );
+}
+
+/*
+==============================================
+crvkSwapchain::Images
+==============================================
+*/
 const VkImage* crvkSwapchain::Images( void ) const
 {
     return m_images.Pointer();
 }
 
+/*
+==============================================
+crvkSwapchain::ImageViews
+==============================================
+*/
 const VkImageView* crvkSwapchain::ImageViews( void ) const
 {
     return m_imageViews.Pointer();
@@ -188,7 +260,6 @@ crvkSwapchainDynamic::crvkSwapchainDynamic
 ==============================================
 */
 crvkSwapchainDynamic::crvkSwapchainDynamic( void ) : 
-    m_imageIndex( 0 ),
     m_frameCount( 0 )
 {
 }
@@ -275,19 +346,8 @@ bool crvkSwapchainDynamic::Create(
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-    VkFenceCreateInfo fenceInfo{};
-    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
     for (size_t i = 0; i < m_frameCount; i++) 
-    {
-        result = vkCreateSemaphore( m_device->Device(), &semaphoreInfo, k_allocationCallbacks, &m_imageAvailable[i] ); 
-        if( result != VK_SUCCESS )
-        {
-            crvkAppendError( "crvkSwapchainDynamic::Create::vkCreateSemaphore", result );
-            return false;
-        }
-        
+    {        
         result = vkCreateSemaphore( m_device->Device(), &semaphoreInfo, k_allocationCallbacks, &m_renderFinished[i]);
         if( result != VK_SUCCESS )
         {
@@ -337,11 +397,6 @@ void crvkSwapchainDynamic::Destroy( void )
         {
             vkDestroySemaphore( m_device->Device(), m_renderFinished[i], k_allocationCallbacks );
         }
-
-        if( m_imageAvailable[i] != nullptr )
-        {
-            vkDestroySemaphore( m_device->Device(), m_imageAvailable[i], k_allocationCallbacks );
-        }
     }
     
     m_renderFinished.Clear();
@@ -361,18 +416,7 @@ VkResult crvkSwapchainDynamic::Begin( const VkClearColorValue in_clearColor, con
 {
     VkResult result = VK_SUCCESS;
     
-    //
-    // Aquire the current frame image idex
-    //
-    VkAcquireNextImageInfoKHR   acquireNextImageInfo{};
-    acquireNextImageInfo.sType = VK_STRUCTURE_TYPE_ACQUIRE_NEXT_IMAGE_INFO_KHR;
-    acquireNextImageInfo.pNext = nullptr;
-    acquireNextImageInfo.swapchain = Swapchain();
-    acquireNextImageInfo.timeout = UINT64_MAX;
-    acquireNextImageInfo.semaphore = m_imageAvailable[m_frame];
-    acquireNextImageInfo.fence = nullptr;
-    acquireNextImageInfo.deviceMask = 0;
-    result = vkAcquireNextImage2KHR( m_device->Device(), &acquireNextImageInfo, &m_imageIndex );
+    result = AcquireImage();
     if ( result != VK_SUCCESS )
         return result;
 
@@ -397,7 +441,7 @@ VkResult crvkSwapchainDynamic::Begin( const VkClearColorValue in_clearColor, con
     // clear color attachament
     VkRenderingAttachmentInfo colorAttachment{};
     colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-    colorAttachment.imageView = m_imageViews[m_imageIndex];
+    colorAttachment.imageView = CurrentImageView();
     colorAttachment.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR;
     colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -482,14 +526,7 @@ VkResult crvkSwapchainDynamic::SwapBuffers( void )
     auto present = m_device->GetQueue( CRVK_DEVICE_QUEUE_PRESENT ); // get the present queue
 
     // present to the window
-    present->Present( &m_swapChain, &m_imageIndex, 1, &m_renderFinished[m_frame], 1 );
-
-    // Signals acquisition of the next image (now that it has been presented)
-    VkSemaphoreSignalInfo signalAcquire{};
-    signalAcquire.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO;
-    signalAcquire.semaphore = m_imageAvailable[m_frame];
-    signalAcquire.value = 0;
-    vkSignalSemaphore( m_device->Device(), &signalAcquire );
+    PresentImage( &m_renderFinished[m_frame], 1 );
 
     // swap frame 
     m_frame = ( m_frame + 1) % m_frameCount;
