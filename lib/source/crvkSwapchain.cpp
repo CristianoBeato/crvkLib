@@ -22,37 +22,16 @@
 #include "crvkPrecompiled.hpp"
 #include "crvkSwapchain.hpp"
 
-/*
-==============================================
-crvkSwapchain::crvkSwapchain
-==============================================
-*/
 crvkSwapchain::crvkSwapchain( void ) : 
-    m_currentFrame( 0 ),
-    m_imageIndex( 0 ),
     m_imageCount( 0 ),
-    m_frameCount( 0 ),
-    m_swapChain( nullptr ),
-    m_renderPass( nullptr ),
-    m_device( nullptr )
+    m_swapChain( nullptr )
 {
 }
 
-/*
-==============================================
-crvkSwapchain::~crvkSwapchain
-==============================================
-*/
 crvkSwapchain::~crvkSwapchain( void )
 {
-    Destroy();
 }
 
-/*
-==============================================
-crvkSwapchain::Create
-==============================================
-*/
 bool crvkSwapchain::Create( 
                     const crvkContext* in_context,
                     const crvkDevice* in_device, 
@@ -61,17 +40,15 @@ bool crvkSwapchain::Create(
                     const VkSurfaceFormatKHR in_surfaceformat, 
                     const VkPresentModeKHR in_presentMode,
                     const VkSurfaceTransformFlagBitsKHR in_surfaceTransformFlag,
-                    const bool in_recreate )
+                    const bool in_recreate = false )
 {
     VkResult result = VK_SUCCESS;
-    uint32_t i = 0;
-    VkDevice device = nullptr;
-    VkSwapchainKHR oldSwapchain = nullptr;
     uint32_t queueFamilyIndices[2] { UINT32_MAX, UINT32_MAX };
-    m_frameCount = in_frames;
-
-    m_device = const_cast<crvkDevice*>( in_device );
+    VkSwapchainKHR oldSwapchain = nullptr;
+    VkDevice device = nullptr;
+    m_extent = in_extent;
     device = m_device->Device();
+    m_device = const_cast<crvkDevice*>( in_device );
 
     if ( in_recreate )
         oldSwapchain = m_swapChain;
@@ -79,29 +56,28 @@ bool crvkSwapchain::Create(
     ///
     /// Create Swapchain and Imageview 
     /// ==========================================================================
-    
     VkSwapchainCreateInfoKHR swapchainCI{};
     swapchainCI.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swapchainCI.surface = in_context->Surface();
     
-    swapchainCI.minImageCount = m_frameCount;
+    swapchainCI.minImageCount = in_frames;
     swapchainCI.imageFormat = in_surfaceformat.format;
     swapchainCI.imageColorSpace = in_surfaceformat.colorSpace;
-    swapchainCI.imageExtent = in_extent;
+    swapchainCI.imageExtent = m_extent;
     swapchainCI.imageArrayLayers = 1;
     swapchainCI.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-    auto present = m_device->GetQueue( crvkDeviceQueue::CRVK_DEVICE_QUEUE_PRESENT ); // get the present queue
+    auto present = m_device->GetQueue( CRVK_DEVICE_QUEUE_PRESENT ); // get the present queue
     if ( present == nullptr )
     {
-        crvkAppendError( "crvkSwapchain::Create::NO PRESENT QUEUE FOUND", VK_INCOMPLETE );
+        crvkAppendError( "crvkSwapchainDynamic::Create::NO PRESENT QUEUE FOUND", VK_INCOMPLETE );
         return false;
     }
     
-    auto graphic = m_device->GetQueue( crvkDeviceQueue::CRVK_DEVICE_QUEUE_GRAPHICS ); // get the graphic qeue
+    auto graphic = m_device->GetQueue( CRVK_DEVICE_QUEUE_GRAPHICS ); // get the graphic qeue
     if ( graphic == nullptr )
     {
-        crvkAppendError( "crvkSwapchain::Create::NO GRAPHIC QUEUE FOUND", VK_INCOMPLETE );
+        crvkAppendError( "crvkSwapchainDynamic::Create::NO GRAPHIC QUEUE FOUND", VK_INCOMPLETE );
         return false;
     }
 
@@ -131,7 +107,7 @@ bool crvkSwapchain::Create(
     result = vkCreateSwapchainKHR( device, &swapchainCI, k_allocationCallbacks, &m_swapChain );
     if ( result != VK_SUCCESS ) 
     {
-        crvkAppendError( "crvkSwapchain::Create::vkCreateSwapchainKHR", result );
+        crvkAppendError( "crvkSwapchainDynamic::Create::vkCreateSwapchainKHR", result );
         return false;
     }
 
@@ -142,10 +118,10 @@ bool crvkSwapchain::Create(
     }
 
     vkGetSwapchainImagesKHR( device, m_swapChain, &m_imageCount, nullptr );
-    m_images.Alloc( m_imageCount );
+    m_images.Resize( m_imageCount );
     vkGetSwapchainImagesKHR( device, m_swapChain, &m_imageCount, &m_images );
     
-    m_imageViews.Alloc( m_imageCount );
+    m_imageViews.Resize( m_imageCount );
     for ( uint32_t i = 0; i < m_imageCount; i++) 
     {
         VkImageViewCreateInfo createInfo{};
@@ -167,17 +143,102 @@ bool crvkSwapchain::Create(
         if ( in_recreate )
             vkDestroyImageView( device, m_imageViews[i], k_allocationCallbacks );
         
-        result = vkCreateImageView( m_device->Device(), &createInfo, k_allocationCallbacks, &m_imageViews[i] ); 
+        result = vkCreateImageView( device, &createInfo, k_allocationCallbacks, &m_imageViews[i] ); 
         if ( result != VK_SUCCESS ) 
         {
-            crvkAppendError( "crvkSwapchain::Create::vkCreateImageView", result );
+            crvkAppendError( "crvkSwapchainDynamic::Create::vkCreateImageView", result );
             return false;
         }
     }
+}
+
+void crvkSwapchain::Destroy( void )
+{
+    // release buffers and images 
+    for ( uint32_t i = 0; i < m_imageCount; i++)
+    {
+        vkDestroyImageView( m_device->Device(), m_imageViews[i], k_allocationCallbacks );
+    }
+
+    // destoy the frander pass configuration
+    if ( m_swapChain != nullptr )
+    {
+        vkDestroySwapchainKHR( m_device->Device(), m_swapChain, k_allocationCallbacks );
+        m_swapChain = nullptr;
+    }
+
+    m_imageViews.Clear();
+    m_images.Clear();
+    m_device = nullptr;
+}
+
+const VkImage* crvkSwapchain::Images( void ) const
+{
+    return m_images.Pointer();
+}
+
+const VkImageView* crvkSwapchain::ImageViews( void ) const
+{
+    return m_imageViews.Pointer();
+}
+
+/*
+==============================================
+crvkSwapchainDynamic::crvkSwapchainDynamic
+==============================================
+*/
+crvkSwapchainDynamic::crvkSwapchainDynamic( void ) : 
+    m_imageIndex( 0 ),
+    m_frameCount( 0 )
+{
+}
+
+/*
+==============================================
+crvkSwapchainDynamic::~crvkSwapchainDynamic
+==============================================
+*/
+crvkSwapchainDynamic::~crvkSwapchainDynamic( void )
+{
+    Destroy();
+}
+
+/*
+==============================================
+crvkSwapchainDynamic::Create
+==============================================
+*/
+bool crvkSwapchainDynamic::Create( 
+                    const crvkContext* in_context,
+                    const crvkDevice* in_device, 
+                    const uint32_t in_frames, 
+                    const VkExtent2D in_extent, 
+                    const VkSurfaceFormatKHR in_surfaceformat, 
+                    const VkPresentModeKHR in_presentMode,
+                    const VkSurfaceTransformFlagBitsKHR in_surfaceTransformFlag,
+                    const bool in_recreate )
+{
+    uint32_t i = 0;
+    VkResult result = VK_SUCCESS;
+    m_frameCount = in_frames;
+    
+    if( crvkSwapchain::Create( 
+        in_context, 
+        in_device, 
+        in_frames, 
+        in_extent, 
+        in_surfaceformat, 
+        in_presentMode, 
+        in_surfaceTransformFlag, 
+        in_recreate ) )
+        return false;
 
     ///
     /// Create Renderpass and Framebuffers 
     /// ==========================================================================
+    
+    uint32_t images = ImageCount();
+
     VkAttachmentDescription colorAttachment{};
     colorAttachment.format = in_surfaceformat.format;
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -187,7 +248,7 @@ bool crvkSwapchain::Create(
     colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
+    
     VkAttachmentReference colorAttachmentRef{};
     colorAttachmentRef.attachment = 0;
     colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -205,81 +266,50 @@ bool crvkSwapchain::Create(
     dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
-    VkRenderPassCreateInfo renderPassInfo{};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = 1;
-    renderPassInfo.pAttachments = &colorAttachment;
-    renderPassInfo.subpassCount = 1;
-    renderPassInfo.pSubpasses = &subpass;
-    renderPassInfo.dependencyCount = 1;
-    renderPassInfo.pDependencies = &dependency;
-
-    if ( !in_recreate && !m_renderPass )
-    {   
-        result = vkCreateRenderPass( device, &renderPassInfo, nullptr, &m_renderPass ); 
-        if ( result != VK_SUCCESS )
-        {
-            crvkAppendError( "crvkSwapchain::Create::vkCreateFramebuffer", result );
-            return false;
-        }
-    }
-
-    m_framebuffers.Alloc( m_imageCount );
-    for ( i = 0; i < m_imageCount; i++) 
-    {
-        VkImageView attachments[] = 
-        {
-            m_imageViews[i]
-        };
-
-        VkFramebufferCreateInfo framebufferCI{};
-        framebufferCI.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferCI.renderPass = m_renderPass;
-        framebufferCI.attachmentCount = 1;
-        framebufferCI.pAttachments = attachments;
-        framebufferCI.width = in_extent.width;
-        framebufferCI.height = in_extent.height;
-        framebufferCI.layers = 1;
-
-        if ( in_recreate )
-            vkDestroyFramebuffer( device, m_framebuffers[i], nullptr );
-
-        result = vkCreateFramebuffer( device, &framebufferCI, nullptr, &m_framebuffers[i] );
-        if ( result != VK_SUCCESS ) 
-        {
-            crvkAppendError( "crvkSwapchain::Create::vkCreateFramebuffer", result );
-            return false;
-        }
-    }
-
     ///
     /// Create Sync Objects 
     /// ==========================================================================
-    m_imageAvailableSemaphores.Alloc( m_frameCount );
-    m_renderFinishedSemaphores.Alloc( m_frameCount );
+    m_imageAvailable.Resize( m_frameCount );
+    m_renderFinished.Resize( m_frameCount );
 
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-        VkFenceCreateInfo fenceInfo{};
+    VkFenceCreateInfo fenceInfo{};
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
     for (size_t i = 0; i < m_frameCount; i++) 
     {
-        result = vkCreateSemaphore( device, &semaphoreInfo, k_allocationCallbacks, &m_imageAvailableSemaphores[i] ); 
+        result = vkCreateSemaphore( m_device->Device(), &semaphoreInfo, k_allocationCallbacks, &m_imageAvailable[i] ); 
         if( result != VK_SUCCESS )
         {
-            crvkAppendError( "crvkSwapchain::Create::vkCreateSemaphore", result );
+            crvkAppendError( "crvkSwapchainDynamic::Create::vkCreateSemaphore", result );
             return false;
         }
         
-        result = vkCreateSemaphore( device, &semaphoreInfo, k_allocationCallbacks, &m_renderFinishedSemaphores[i]);
+        result = vkCreateSemaphore( m_device->Device(), &semaphoreInfo, k_allocationCallbacks, &m_renderFinished[i]);
         if( result != VK_SUCCESS )
         {
-            crvkAppendError( "crvkSwapchain::Create::vkCreateSemaphore", result );
+            crvkAppendError( "crvkSwapchainDynamic::Create::vkCreateSemaphore", result );
             return false;    
         }
+    }
+
+    ///
+    /// Allocate command buffers
+    /// ==========================================================================
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.commandPool = m_device->GetQueue(CRVK_DEVICE_QUEUE_GRAPHICS)->CommandPool();
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandBufferCount = in_frames;
+    m_commandBuffers.Resize( in_frames );
+    result = vkAllocateCommandBuffers( m_device->Device(), &allocInfo, &m_commandBuffers );
+    if ( result != VK_SUCCESS ) 
+    {   
+        crvkAppendError( "crvkSwapchainDynamic::Create::vkAllocateCommandBuffers", result );
+        return false;
     }
 
     return true;
@@ -287,59 +317,62 @@ bool crvkSwapchain::Create(
   
 /*
 ==============================================
-crvkSwapchain::Destroy
+crvkSwapchainDynamic::Destroy
 ==============================================
 */
-void crvkSwapchain::Destroy( void )
+void crvkSwapchainDynamic::Destroy( void )
 {
     uint32_t i = 0;
 
-    // release buffers and images 
-    for ( i = 0; i < m_imageCount; i++)
+    if ( m_commandBuffers.Count() )
     {
-        vkDestroyFramebuffer( m_device->Device(), m_framebuffers[i], k_allocationCallbacks );
-        vkDestroyImageView( m_device->Device(), m_imageViews[i], k_allocationCallbacks );
+        auto graphic = m_device->GetQueue( CRVK_DEVICE_QUEUE_GRAPHICS );
+        vkFreeCommandBuffers( m_device->Device(), graphic->CommandPool(), m_commandBuffers.Count(), &m_commandBuffers );
+        m_commandBuffers.Clear();
     }
-    
-    m_framebuffers.Free();
-    m_imageViews.Free();
 
-    // release semaphores and fences
-    for ( i = 0; i < m_frameCount; i++ )
+    for ( uint32_t i = 0; i < m_frameCount; i++)
     {
-        vkDestroySemaphore( m_device->Device(), m_renderFinishedSemaphores[i], k_allocationCallbacks );
-        vkDestroySemaphore( m_device->Device(), m_imageAvailableSemaphores[i], k_allocationCallbacks );
-    }
-    
-    m_renderFinishedSemaphores.Free();
-    m_imageAvailableSemaphores.Free();
+        if( m_renderFinished[i] != nullptr )
+        {
+            vkDestroySemaphore( m_device->Device(), m_renderFinished[i], k_allocationCallbacks );
+        }
 
-    // destroy render pass configuration
-    if ( m_renderPass != nullptr )
-    {
-        vkDestroyRenderPass( m_device->Device(), m_renderPass, k_allocationCallbacks );
-        m_renderPass = nullptr;
+        if( m_imageAvailable[i] != nullptr )
+        {
+            vkDestroySemaphore( m_device->Device(), m_imageAvailable[i], k_allocationCallbacks );
+        }
     }
     
-    // destoy the frander pass configuration
-    if ( m_swapChain != nullptr )
-    {
-        vkDestroySwapchainKHR( m_device->Device(), m_swapChain, k_allocationCallbacks );
-        m_swapChain = nullptr;
-    }
+    m_renderFinished.Clear();
+    m_imageAvailable.Clear();
+    m_commandBuffers.Clear();
     
-    m_device = nullptr;
+    // release swapchains
+    crvkSwapchain::Destroy();
 }
 
 /*
 ==============================================
-crvkSwapchain::Begin
+crvkSwapchainDynamic::Begin
 ==============================================
 */
-VkResult crvkSwapchain::Begin( void )
+VkResult crvkSwapchainDynamic::Begin( const VkClearColorValue in_clearColor, const VkClearDepthStencilValue in_clearDepthStencil )
 {
     VkResult result = VK_SUCCESS;
-    result = vkAcquireNextImageKHR( m_device->Device(), m_swapChain, UINT64_MAX, m_imageAvailableSemaphores[m_currentFrame], VK_NULL_HANDLE, &m_imageIndex );
+    
+    //
+    // Aquire the current frame image idex
+    //
+    VkAcquireNextImageInfoKHR   acquireNextImageInfo{};
+    acquireNextImageInfo.sType = VK_STRUCTURE_TYPE_ACQUIRE_NEXT_IMAGE_INFO_KHR;
+    acquireNextImageInfo.pNext = nullptr;
+    acquireNextImageInfo.swapchain = Swapchain();
+    acquireNextImageInfo.timeout = UINT64_MAX;
+    acquireNextImageInfo.semaphore = m_imageAvailable[m_frame];
+    acquireNextImageInfo.fence = nullptr;
+    acquireNextImageInfo.deviceMask = 0;
+    result = vkAcquireNextImage2KHR( m_device->Device(), &acquireNextImageInfo, &m_imageIndex );
     if ( result != VK_SUCCESS )
         return result;
 
@@ -347,92 +380,119 @@ VkResult crvkSwapchain::Begin( void )
     VkSemaphoreWaitInfo waitRender{};
     waitRender.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
     waitRender.semaphoreCount = 1,
-    waitRender.pSemaphores = &m_renderFinishedSemaphores[m_currentFrame];
+    waitRender.pSemaphores = &m_renderFinished[m_frame];
     waitRender.pValues = nullptr;
     result = vkWaitSemaphores( m_device->Device(), &waitRender, UINT64_MAX );
+
+    result = vkResetCommandBuffer( m_commandBuffers[m_frame], VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT );
+    if( result != VK_SUCCESS )
+        crvkAppendError( "crvkCommandBufferRoundRobin::Begin::vkResetCommandBuffer", result );
+
+    // begin register the commands
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    result = vkBeginCommandBuffer( m_commandBuffers[m_frame], &beginInfo );
+
+    // clear color attachament
+    VkRenderingAttachmentInfo colorAttachment{};
+    colorAttachment.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+    colorAttachment.imageView = m_imageViews[m_imageIndex];
+    colorAttachment.imageLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR;
+    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    colorAttachment.clearValue.color = in_clearColor;
+    colorAttachment.clearValue.depthStencil = in_clearDepthStencil;
+
+    VkRenderingInfo renderingInfo{};
+    renderingInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+    renderingInfo.renderArea = { {0, 0}, m_extent };
+    renderingInfo.layerCount = 1;
+    renderingInfo.colorAttachmentCount = 1;
+    renderingInfo.pColorAttachments = &colorAttachment;
+    vkCmdBeginRendering( m_commandBuffers[m_frame], &renderingInfo);
 
     return result;
 }
 
 /*
 ==============================================
-crvkSwapchain::End
+crvkSwapchainDynamic::End
 ==============================================
 */
-VkResult crvkSwapchain::End( const VkCommandBuffer* in_commandBuffers, const uint32_t in_commandBufferCount )
+VkResult crvkSwapchainDynamic::End( void )
 {
     VkResult result = VK_SUCCESS;
-    auto graphic = m_device->GetQueue( crvkDeviceQueue::CRVK_DEVICE_QUEUE_GRAPHICS ); // get the graphic qeue
+    auto graphic = m_device->GetQueue( CRVK_DEVICE_QUEUE_GRAPHICS ); // get the graphic qeue
 
+    // register the frame end
+    vkCmdEndRendering( m_commandBuffers[m_frame] );
+    
+    // submit swap chain command buffer 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-    VkSemaphore waitSemaphores[] = { m_imageAvailableSemaphores[m_currentFrame] };
+    
+    VkSemaphore waitSemaphores[] = { m_imageAvailable[m_frame] };
     VkPipelineStageFlags waitStages[] = {};
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = waitSemaphores;
     submitInfo.pWaitDstStageMask = waitStages;
 
-    submitInfo.commandBufferCount = in_commandBufferCount;
-    submitInfo.pCommandBuffers = in_commandBuffers; 
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &m_commandBuffers[m_frame]; 
 
-    VkSemaphore signalSemaphores[] = { m_renderFinishedSemaphores[m_currentFrame] };
+    VkSemaphore signalSemaphores[] = { m_renderFinished[m_frame] };
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
     VkSemaphoreSubmitInfo waitInfo{};
     waitInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-    waitInfo.semaphore = m_imageAvailableSemaphores[m_currentFrame];
+    waitInfo.semaphore = m_imageAvailable[m_frame];
     waitInfo.stageMask = /* VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT */ VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
     waitInfo.value = 0;
     waitInfo.pNext = nullptr;
 
+    // signal wen we done the rendergin
     VkSemaphoreSubmitInfo signalInfo{};
     signalInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-    signalInfo.semaphore = m_renderFinishedSemaphores[m_currentFrame];
+    signalInfo.semaphore = m_renderFinished[m_frame];
     signalInfo.stageMask = /* VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT */ VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
     signalInfo.value = 0;
     signalInfo.pNext = nullptr;
 
-    crvkDynamicVector<VkCommandBufferSubmitInfo> commandBuffersSubmitInfo{};
-    commandBuffersSubmitInfo.Resize( in_commandBufferCount );
-    for ( uint32_t i = 0; i < in_commandBufferCount; i++)
-    {
-        commandBuffersSubmitInfo[i].sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
-        commandBuffersSubmitInfo[i].deviceMask = 0;
-        commandBuffersSubmitInfo[i].commandBuffer = in_commandBuffers[i];
-        commandBuffersSubmitInfo[i].pNext = nullptr;
-    }
-    
-    result = graphic->Submit( &waitInfo, 1, &commandBuffersSubmitInfo, in_commandBufferCount, &signalInfo, 1, nullptr );
+    // sumit draw command buffer 
+    VkCommandBufferSubmitInfo commandBuffersSubmitInfo{};
+    commandBuffersSubmitInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+    commandBuffersSubmitInfo.pNext = nullptr;
+    commandBuffersSubmitInfo.commandBuffer = m_commandBuffers[m_frame];
+    commandBuffersSubmitInfo.deviceMask = 0;
+    result = graphic->Submit( &waitInfo, 1, &commandBuffersSubmitInfo, 1, &signalInfo, 1, nullptr );
     if( result != VK_SUCCESS )
         return result;
 }
 
 /*
 ==============================================
-crvkSwapchain::SwapBuffers
+crvkSwapchainDynamic::SwapBuffers
 ==============================================
 */
-VkResult crvkSwapchain::SwapBuffers( void )
+VkResult crvkSwapchainDynamic::SwapBuffers( void )
 {
     VkResult result = VK_SUCCESS;
-    auto present = m_device->GetQueue( crvkDeviceQueue::CRVK_DEVICE_QUEUE_PRESENT ); // get the present queue
+    auto present = m_device->GetQueue( CRVK_DEVICE_QUEUE_PRESENT ); // get the present queue
 
     // present to the window
-    uint32_t swapChainsImageIndex[]{ m_imageIndex };
-    VkSwapchainKHR swapChains[1]{ m_swapChain };
-    present->Present( swapChains, swapChainsImageIndex, 1, &m_renderFinishedSemaphores[m_currentFrame], 1 );
+    present->Present( &m_swapChain, &m_imageIndex, 1, &m_renderFinished[m_frame], 1 );
 
     // Signals acquisition of the next image (now that it has been presented)
     VkSemaphoreSignalInfo signalAcquire{};
     signalAcquire.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO;
-    signalAcquire.semaphore = m_imageAvailableSemaphores[m_currentFrame];
+    signalAcquire.semaphore = m_imageAvailable[m_frame];
     signalAcquire.value = 0;
     vkSignalSemaphore( m_device->Device(), &signalAcquire );
 
     // swap frame 
-    m_currentFrame = ( m_currentFrame + 1) % m_frameCount;
+    m_frame = ( m_frame + 1) % m_frameCount;
 
     return result;
 }

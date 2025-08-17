@@ -94,12 +94,12 @@ class crvkPointer;
 #include "crvkDevice.hpp"
 #include "crvkFence.hpp"
 #include "crvkSemaphore.hpp"
-#include "crvkSwapchain.hpp"
 #include "crvkBuffer.hpp"
 #include "crvkImage.hpp"
 #include "crvkFrameBuffer.hpp"
-#include "crvkShaderStage.hpp"
 #include "crvkCommandBuffer.hpp"
+#include "crvkSwapchain.hpp"
+#include "crvkShaderStage.hpp"
 #include "crvkPipeline.hpp"
 
 #endif //__CRVK_IMPLEMENTATION_HPP__
