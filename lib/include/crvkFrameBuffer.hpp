@@ -34,6 +34,7 @@ public:
             const uint32_t in_width,
             const uint32_t in_height,
             const uint32_t in_layers,
+            const uint32_t in_attachmentDescriptionsCount,
             const VkAttachmentDescription* in_attachmentsDescriptions,
             const uint32_t in_subpassCount,
             const VkSubpassDescription* in_subpasses,
@@ -61,6 +62,7 @@ public:
         const uint32_t in_width,
         const uint32_t in_height,
         const uint32_t in_layers,
+        const uint32_t in_attachmentDescriptionsCount,
         const VkAttachmentDescription* in_attachmentsDescriptions,
         const uint32_t in_subpassCount,
         const VkSubpassDescription* in_subpasses,
@@ -91,6 +93,7 @@ public:
         const uint32_t in_width,
         const uint32_t in_height,
         const uint32_t in_layers,
+        const uint32_t in_attachmentDescriptionsCount,
         const VkAttachmentDescription* in_attachmentsDescriptions,
         const uint32_t in_subpassCount,
         const VkSubpassDescription* in_subpasses,
@@ -102,12 +105,11 @@ public:
     virtual VkFramebuffer   Framebuffer( void ) const override { return m_frameBuffers[m_frameCount]; }
 
 private:
-    uint32_t        m_frame;
-    uint32_t        m_frameCount;
-    crvkDevice*     m_device;
-    VkRenderPass    m_renderPass;
-    VkFramebuffer*  m_frameBuffers;
+    uint32_t                            m_frame;
+    uint32_t                            m_frameCount;
+    crvkDevice*                         m_device;
+    VkRenderPass                        m_renderPass;
+    crvkDynamicVector<VkFramebuffer>    m_frameBuffers;
 };
-
 
 #endif //__CRVK_FRAME_BUFFER_HPP__

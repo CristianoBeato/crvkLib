@@ -28,6 +28,7 @@ set( CRVK_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkDevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkException.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkFence.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkFrameBuffer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkPipeline.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkSemaphore.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/source/crvkSwapchain.cpp
@@ -44,6 +45,7 @@ set( CRVK_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/include/crvkDevice.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/include/crvkException.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/include/crvkFence.hpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/crvkFrameBuffer.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/include/crvkPipeline.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/include/crvkSemaphore.hpp
     ${CMAKE_CURRENT_SOURCE_DIR}/include/crvkShaderStage.hpp

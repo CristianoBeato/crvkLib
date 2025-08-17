@@ -39,6 +39,7 @@ bool crvkFrameBufferStatic::Create(
     const uint32_t in_width,
     const uint32_t in_height,
     const uint32_t in_layers,
+    const uint32_t in_attachmentDescriptionsCount,
     const VkAttachmentDescription* in_attachmentsDescriptions,
     const uint32_t in_subpassCount,
     const VkSubpassDescription* in_subpasses,
@@ -99,7 +100,7 @@ void crvkFrameBufferStatic::Destroy( void )
 
     if( m_renderPass != nullptr )
     {
-        vkDestroyRenderPass( m_device, m_renderPass, k_allocationCallbacks );
+        vkDestroyRenderPass( m_device->Device(), m_renderPass, k_allocationCallbacks );
         m_renderPass = nullptr;
     }
     
