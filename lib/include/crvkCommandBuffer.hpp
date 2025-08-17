@@ -503,13 +503,13 @@ public:
                             const void* in_nex = nullptr ) const ;
 
 private:
-    uint32_t            m_numBuffers;
-    uint32_t            m_currentBuffer;
-    uint64_t            m_timelineValue;
-    VkSemaphore         m_doneSemaphore;
-    VkCommandBuffer*    m_commandBuffers;
-    crvkDevice*         m_device;
-    crvkDeviceQueue*    m_queue;
+    uint32_t                            m_numBuffers;
+    uint32_t                            m_currentBuffer;
+    uint64_t                            m_timelineValue;
+    VkSemaphore                         m_doneSemaphore;
+    crvkDynamicVector<VkCommandBuffer>  m_commandBuffers;
+    crvkDevice*                         m_device;
+    crvkDeviceQueue*                    m_queue;
 };
 
 #endif //__CRVK_COMMAND_BUFFER_HPP__
