@@ -63,6 +63,7 @@ public:
     const VkImageView   CurrentImageView( void ) const { return m_imageViews[m_currentImage]; }
     uint32_t            ImageCount( void ) const { return m_imageCount; }
     uint32_t            CurrentImageID( void ) const { return m_imageCount; }
+    VkExtent2D          Extent( void ) const { return m_extent; }
 
     /// @brief Return the swapchain handle 
     VkSwapchainKHR      Swapchain( void ) const { return m_swapChain; }
