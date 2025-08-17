@@ -225,13 +225,6 @@ VkResult crvkSwapchain::PresentImage( const VkSemaphore* in_waitSemaphores, cons
 
     // present to the window
     present->Present( &m_swapChain, &m_currentImage, 1, in_waitSemaphores, in_waitSemaphoresCount );
-
-    // Signals acquisition of the next image (now that it has been presented)
-    VkSemaphoreSignalInfo signalAcquire{};
-    signalAcquire.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO;
-    signalAcquire.semaphore = m_imageAvailable[m_currentImage];
-    signalAcquire.value = 0;
-    vkSignalSemaphore( m_device->Device(), &signalAcquire );
 }
 
 /*
