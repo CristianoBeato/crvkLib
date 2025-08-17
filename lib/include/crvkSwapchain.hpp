@@ -61,6 +61,7 @@ public:
     const VkImageView*  ImageViews( void ) const;
     const VkImage       CurrentImage( void ) const { return m_images[m_currentImage]; }
     const VkImageView   CurrentImageView( void ) const { return m_imageViews[m_currentImage]; }
+    const VkSemaphore   CurrentSemaphore( void ) const { return m_imageAvailable[m_currentImage]; }
     uint32_t            ImageCount( void ) const { return m_imageCount; }
     uint32_t            CurrentImageID( void ) const { return m_imageCount; }
     VkExtent2D          Extent( void ) const { return m_extent; }
