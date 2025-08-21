@@ -22,6 +22,21 @@
 #ifndef __CRVK_IMAGE_HPP__
 #define __CRVK_IMAGE_HPP__
 
+enum crvkImageState_t : uint8_t
+{
+    CRVK_IMAGE_STATE_GRAPHIC_SHADER_SAMPLER = 0, // shader input texture 
+    CRVK_IMAGE_STATE_GRAPHIC_SHADER_BINDING, // storage image
+    CRVK_IMAGE_STATE_GRAPHIC_RENDER_TARGET, // frame buffer output pinding image
+    CRVK_IMAGE_STAGE_GRAPHIC_RENDER_DEPTH,
+    CRVK_IMAGE_STAGE_GRAPHIC_RENDER_DEPTH_STENCIL, 
+    CRVK_IMAGE_STATE_COMPUTE_READ,
+    CRVK_IMAGE_STATE_COMPUTE_WRITE,
+    CRVK_IMAGE_STATE_GPU_COPY_SRC,
+    CRVK_IMAGE_STATE_GPU_COPY_DST,
+};
+
+typedef struct crvkImageHandle_t crvkImageHandle_t;
+
 // basic image object, just create the structure
 class crvkImage
 {
@@ -37,22 +52,34 @@ public:
         const uint16_t in_layers,
         const uint32_t in_width,
         const uint32_t in_height,
-        const uint32_t in_depth );
+        const uint32_t in_depth,
+        const VkSampleCountFlagBits in_samples = VK_SAMPLE_COUNT_1_BIT );
         
     virtual void    Destroy( void );
     virtual void    CopyFromBuffer( const VkBuffer in_srcBuffer, const VkBufferImageCopy2* in_copyRegions, const uint32_t in_count ) {};
     virtual void    CopyToBuffer( const VkBuffer in_dstBuffer, const VkBufferImageCopy2* in_copyRegions, const uint32_t in_count ) {};
     virtual void    SubData( const void* in_data, const uintptr_t in_offset, const size_t in_size ) {};
-    virtual void    GetSubData( void* in_data, const uintptr_t in_offset, const size_t in_size ) {};
-    VkImage         Handle( void ) const { return m_imageHandle; };
-    VkImageView     View( void ) const { return m_imageView; }
-    VkDeviceMemory  Memory( void ) const { return m_imageMemory; }
+    virtual void    GetSubData( void* in_data, const uintptr_t in_offset, const size_t in_size ) {};    
+    
+    /// @brief 
+    /// @param in_commandBuffer 
+    /// @param in_srcQueue 
+    /// @param in_dstQueue 
+    virtual void        StateTransition(    const VkCommandBuffer in_commandBuffer, 
+                                            const crvkImageState_t in_state, 
+                                            const VkImageAspectFlags in_aspect,
+                                            const uint32_t in_dstQueue, 
+                                            const uint32_t in_baseMipLevel,
+                                            const uint32_t in_levelCount,
+                                            const uint32_t in_baseArrayLayer,
+                                            const uint32_t in_layerCount );
+    
+    VkImage         Handle( void ) const;
+    VkImageView     View( void ) const;
+    VkDeviceMemory  Memory( void ) const;
 
-public:
-    VkImage             m_imageHandle;
-    VkImageView         m_imageView;
-    VkDeviceMemory      m_imageMemory;
-    crvkDevice*         m_device;
+protected:
+    crvkImageHandle_t* m_imageHandle;  
 };
 
 class crvkImageStatic : public crvkImage 
@@ -69,7 +96,8 @@ public:
         const uint16_t in_layers,
         const uint32_t in_width,
         const uint32_t in_height,
-        const uint32_t in_depth ) override;
+        const uint32_t in_depth, 
+        const VkSampleCountFlagBits in_samples = VK_SAMPLE_COUNT_1_BIT ) override;
         
     virtual void    Destroy( void ) override;
     virtual void    CopyFromBuffer( const VkBuffer in_srcBuffer, const VkBufferImageCopy2* in_copyRegions, const uint32_t in_count ) override;
@@ -85,8 +113,10 @@ protected:
     uint64_t            m_useValue;
     uint64_t            m_copyValue;
     VkSemaphore         m_copySemaphore;
-    VkSemaphore         m_useSemaphore;    
-    VkCommandBuffer     m_commandBuffer;  
+    VkSemaphore         m_useSemaphore;
+    VkCommandPool       m_commandPool;
+    VkCommandBuffer     m_commandBuffer;
+    crvkDevice*         m_device;  
 };
 
 class crvkImageStaging : public crvkImageStatic 
