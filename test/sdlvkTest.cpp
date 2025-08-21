@@ -150,7 +150,7 @@ void crvkTest::InitVulkan(void)
 
     // Create the element buffer 
     m_elementBuffer = new crvkBufferStaging();
-    if( !m_elementBuffer->Create( m_device, sizeof( uint16_t ) * 6, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, CRVK_BUFFER_DYNAMIC_STORAGE_BIT ) )
+    if( !m_elementBuffer->Create( m_device, sizeof( uint16_t ) * 6, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, 0  ) )
         throw std::runtime_error( "can't create element buffer" );
 
     // Copy the index to buffer 
@@ -158,11 +158,14 @@ void crvkTest::InitVulkan(void)
 
     // Create the vertex buffer
     m_vertexBuffer = new crvkBufferStaging();
-    if( !m_vertexBuffer->Create( m_device, sizeof( crVertex ) * 4, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, CRVK_BUFFER_DYNAMIC_STORAGE_BIT ) )
+    if( !m_vertexBuffer->Create( m_device, sizeof( crVertex ) * 4, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 0 ) )
         throw std::runtime_error( "can't create element buffer" );
 
     // copy vertex to buffer
     m_vertexBuffer->SubData( m_device, 0, sizeof( crVertex ) * 4 );
+
+    m_cmd = new crvkCommandBufferRoundRobin();
+    m_cmd->Create( m_device, m_device->GetQueue( CRVK_DEVICE_QUEUE_GRAPHICS ), 3 );
 
     InitShaders();
 
@@ -172,11 +175,7 @@ void crvkTest::InitVulkan(void)
 void crvkTest::InitShaders( void )
 {
     
-    size_t fileSize = 0;
-    FILE* sourceFile;
-    char* shaderSource = nullptr;
-    crvkShader* vertexShader = nullptr;
-    crvkShader* fragmentShader = nullptr;
+    FILE* sourceFile = nullptr;
     
     // file size lambda
     auto fSize = []( FILE* in_file )
@@ -187,7 +186,13 @@ void crvkTest::InitShaders( void )
         fseek( in_file, 0, SEEK_SET ); // back to data start 
         return size;
     };
-
+    
+#if 0
+    size_t fileSize = 0;
+    char* shaderSource = nullptr;
+    crvkShader* vertexShader = nullptr;
+    crvkShader* fragmentShader = nullptr;
+    
     // Open and compile vertx shader
     sourceFile = fopen( "shaders/test_shader.vert", "r" );
     if ( sourceFile == nullptr ) 
@@ -256,6 +261,49 @@ void crvkTest::InitShaders( void )
     // release shaders 
     delete vertexShader;
     delete fragmentShader;
+#else
+    size_t legenth[2] = { 0, 0 };
+    uint32_t* spirVSources[2] = { nullptr, nullptr };
+    VkShaderStageFlagBits shaderStages[2] = { VK_SHADER_STAGE_VERTEX_BIT, VK_SHADER_STAGE_FRAGMENT_BIT };
+
+    /*============ vertex shader ============*/
+    // Open and compile vertx shader
+    sourceFile = fopen( "shaders/test_shader_vert.spv", "r" );
+    if ( sourceFile == nullptr ) 
+        throw std::runtime_error("failed to open file!");
+    
+    legenth[0] = fSize( sourceFile );
+   
+    spirVSources[0] = static_cast<uint32_t*>( SDL_malloc( legenth[0] ) );
+    std::memset( spirVSources[0], 0x00, legenth[0] );
+
+    // read source content
+    fread( spirVSources[0], 1, legenth[0], sourceFile ); 
+
+    // release the file 
+    fclose( sourceFile );
+    
+    /*============ frament shader ============*/
+    // Open and compile frament
+    sourceFile = fopen( "shaders/test_shader_frag.spv", "r" );
+    if ( sourceFile == nullptr ) 
+        throw std::runtime_error("failed to open file!");
+    
+    legenth[1] = fSize( sourceFile );
+   
+    spirVSources[1] = static_cast<uint32_t*>( SDL_malloc( legenth[1] ) );
+    std::memset( spirVSources[1], 0x00, legenth[1] );
+
+    // read source content
+    fread( spirVSources[1], 1, legenth[1], sourceFile ); 
+
+    // release the file 
+    fclose( sourceFile );
+    
+    m_shaderProgram = new crvkSpirVProgram();
+    if( !dynamic_cast<crvkSpirVProgram*>( m_shaderProgram )->Create( m_device, shaderStages, spirVSources, legenth, 2 ) ) 
+        throw std::runtime_error( "can't compile shaders\n" );
+#endif
 }
 
 void crvkTest::InitPipeline( const uint32_t in_samples )
@@ -371,26 +419,12 @@ void crvkTest::InitPipeline( const uint32_t in_samples )
     dynamicState.dynamicStateCount = 11;
     dynamicState.pDynamicStates = dynamicStates;
 
-    m_pipeline = new crvkPipelineCommand();
+    m_pipeline = new crvkGraphicPipeline();
     if( m_pipeline->Create( 
-            m_device, 
-            m_swapchain->FrameCount(), 
-            0, 
-            0, 
-            m_shaderProgram->PipelineShaderStagesCount(),
-            m_shaderProgram->PipelineShaderStages(),
-            &vertexInputInfo,
-            &inputAssembly,
-            &pipelineTessellationStateCI,
-            &viewportStateCI,
-            &rasterizationStateCI,
-            &multisampleStateCI,
-            &depthStencilStateCI,
-            &colorBlendStateCI,
-            &dynamicState,
-            m_swapchain->RenderPass(),
-            nullptr
-        ) )
+            m_device,   
+            3,
+            1 
+    ) )
     {
         throw std::runtime_error("failed to create pipeline!");
     }
@@ -417,6 +451,13 @@ void crvkTest::FinishVulkan(void)
     {
         delete m_shaderProgram;
         m_shaderProgram = nullptr; 
+    }
+    
+    if ( m_cmd != nullptr )
+    {
+        m_cmd->Destroy();
+        delete m_cmd;
+        m_cmd = nullptr;
     }
     
 

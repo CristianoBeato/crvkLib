@@ -111,7 +111,6 @@ public:
     virtual VkBuffer    Handle( void ) const { return m_buffer; };
 
 protected:
-
     /// @brief helper to keep buffer state transition control
     struct state_t
     {
