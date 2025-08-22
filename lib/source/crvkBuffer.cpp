@@ -21,16 +21,27 @@
 #include "crvkPrecompiled.hpp"
 #include "crvkBuffer.hpp"
 
+typedef struct crvkBufferHandler_t
+{
+    uint32_t                queue;      // buffer current queue
+    VkBufferUsageFlags      usage;      // buffer usage 
+    VkMemoryPropertyFlags   property;   // memory properties 
+    VkPipelineStageFlags2   stage;      // current buffer pipeline stage
+    VkAccessFlags2          access;     // buffer acess flags
+    VkBuffer                buffer;     // buffer handler 
+    VkDeviceMemory          memory;     // buffer memory acess 
+    VkDevice                device;     // buffer device handler
+} crvkBufferHandler_t;
+
+
 /*
 ==============================================
 crvkBuffer::crvkBuffer
 ==============================================
 */
-crvkBuffer::crvkBuffer( void ) : 
-    m_buffer( nullptr ), 
-    m_memory( nullptr ),
-    m_device( nullptr )
+crvkBuffer::crvkBuffer( void ) : m_bufferHandler( nullptr ) 
 {
+    m_bufferHandler = new crvkBufferHandler_t;
 }
 
 /*
@@ -41,6 +52,12 @@ crvkBuffer::~crvkBuffer
 crvkBuffer::~crvkBuffer(void)
 {
     Destroy();
+
+    if ( m_bufferHandler != nullptr )
+    {
+        delete m_bufferHandler;
+        m_bufferHandler = nullptr;
+    }
 }
 
 /*
@@ -50,13 +67,13 @@ crvkBuffer::Create
 */
 bool crvkBuffer::Create( const crvkDevice* in_device, const size_t in_size, const VkBufferUsageFlags in_usage, const VkMemoryPropertyFlags in_flags )
 {
+    VkMemoryRequirements memRequirements;
     VkResult result = VK_SUCCESS;
-    VkDevice device  = nullptr; 
-    m_device = const_cast<crvkDevice*>( in_device );
-    m_currentState.usage = in_usage;
-    m_currentState.property = in_flags;
-    m_currentState.queue = VK_QUEUE_FAMILY_IGNORED;
-    device = m_device->Device();
+    
+    m_bufferHandler->device = in_device->Device();
+    m_bufferHandler->usage = in_usage;
+    m_bufferHandler->property = in_flags;
+    m_bufferHandler->queue = VK_QUEUE_FAMILY_IGNORED;
 
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -64,34 +81,33 @@ bool crvkBuffer::Create( const crvkDevice* in_device, const size_t in_size, cons
     bufferInfo.usage = in_usage;
 
     // we use tranfer queue for buffer content
-    if( m_device->HasTransferQueue() )
+    if( in_device->HasTransferQueue() )
         bufferInfo.sharingMode = VK_SHARING_MODE_CONCURRENT;
     else
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    result = vkCreateBuffer( device, &bufferInfo, k_allocationCallbacks, &m_buffer );
+    result = vkCreateBuffer( m_bufferHandler->device, &bufferInfo, k_allocationCallbacks, &m_bufferHandler->buffer );
     if ( result != VK_SUCCESS) 
     {
         crvkAppendError( "crvkBufferStatic::Create::vkCreateBuffer", result );
         return false;
     }
 
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements( device, m_buffer, &memRequirements );
+    vkGetBufferMemoryRequirements( m_bufferHandler->device, m_bufferHandler->buffer, &memRequirements );
 
     // try find the required memory 
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = m_device->FindMemoryType( memRequirements.memoryTypeBits, in_flags );
-    result = vkAllocateMemory( device, &allocInfo, k_allocationCallbacks, &m_memory );
+    allocInfo.memoryTypeIndex = in_device->FindMemoryType( memRequirements.memoryTypeBits, in_flags );
+    result = vkAllocateMemory( m_bufferHandler->device, &allocInfo, k_allocationCallbacks, &m_bufferHandler->memory );
     if ( result != VK_SUCCESS ) 
     {
         crvkAppendError( "crvkBufferStatic::Create::vkAllocateMemory", result );
         return false;
     }
 
-    result = vkBindBufferMemory( device, m_buffer, m_memory, 0 );
+    result = vkBindBufferMemory( m_bufferHandler->device, m_bufferHandler->buffer, m_bufferHandler->memory, 0 );
     if ( result != VK_SUCCESS )
     {
         crvkAppendError( "crvkBufferStatic::Create::vkBindBufferMemory", result );
@@ -108,19 +124,22 @@ crvkBuffer::Destroy
 */
 void crvkBuffer::Destroy( void )
 {
-    if ( m_memory != nullptr )
+    if ( m_bufferHandler == nullptr )
+        return;
+
+    if ( m_bufferHandler->memory != nullptr )
     {
-        vkFreeMemory( m_device->Device(), m_memory, k_allocationCallbacks );
-        m_memory = nullptr;
+        vkFreeMemory( m_bufferHandler->device, m_bufferHandler->memory, k_allocationCallbacks );
+        m_bufferHandler->memory = nullptr;
     }
 
-    if ( m_buffer != nullptr )
+    if ( m_bufferHandler->buffer != nullptr )
     {
-        vkDestroyBuffer( m_device->Device(), m_buffer, k_allocationCallbacks );
-        m_buffer = nullptr;
+        vkDestroyBuffer( m_bufferHandler->device, m_bufferHandler->buffer, k_allocationCallbacks );
+        m_bufferHandler->buffer = nullptr;
     }
     
-    m_device = nullptr;
+    m_bufferHandler->device = nullptr;
 }
 
 /*
@@ -131,7 +150,10 @@ crvkBuffer::Map
 void *crvkBuffer::Map( const uintptr_t in_offset, const size_t in_size, const crvkBufferMapAccess_t in_acces ) 
 {
     void* poiter = nullptr;
-    vkMapMemory( m_device->Device(), m_memory, in_offset, in_size, 0, &poiter );
+    if ( m_bufferHandler == nullptr || m_bufferHandler->memory == nullptr )
+        return nullptr;
+
+    vkMapMemory( m_bufferHandler->device, m_bufferHandler->memory, in_offset, in_size, 0, &poiter );
     return poiter;    
 }
 
@@ -142,7 +164,10 @@ crvkBuffer::Unmap
 */
 void crvkBuffer::Unmap( void )
 {
-    vkUnmapMemory( m_device->Device(), m_memory );
+    if ( m_bufferHandler == nullptr || m_bufferHandler->memory == nullptr )
+        return;
+
+    vkUnmapMemory( m_bufferHandler->device, m_bufferHandler->memory );
 }
 
 /*
@@ -153,11 +178,15 @@ crvkBuffer::Flush
 void crvkBuffer::Flush( const uintptr_t in_offset, const size_t in_size ) const
 {
     VkMappedMemoryRange range{}; 
+    
+    if ( m_bufferHandler == nullptr || m_bufferHandler->memory == nullptr )
+        return;
+    
     range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-    range.memory = m_memory;
+    range.memory = m_bufferHandler->memory;
     range.offset = in_offset;
     range.size = in_size;
-    vkFlushMappedMemoryRanges( m_device->Device(), 1, &range);
+    vkFlushMappedMemoryRanges( m_bufferHandler->device, 1, &range );
 }
 
 
@@ -166,99 +195,94 @@ void crvkBuffer::Flush( const uintptr_t in_offset, const size_t in_size ) const
 crvkBuffer::StateTransition
 ==============================================
 */
-void crvkBuffer::StateTransition(   const VkCommandBuffer in_commandBuffer, 
-                                    const crvkBufferState_t in_state, 
-                                    const uint32_t in_dstQueue, 
-                                    const VkDeviceSize in_offset, 
-                                    const VkDeviceSize in_size )
+void crvkBuffer::StateTransition( const VkCommandBuffer in_commandBuffer, const crvkBufferState_t in_state, const uint32_t in_dstQueue )
 {
-    state_t oldState = m_currentState;
-    state_t newState = m_currentState; // copy usage and properties
+    uint32_t queue = in_dstQueue;
+    VkPipelineStageFlags2   stage = VK_PIPELINE_STAGE_2_NONE;
+    VkAccessFlags2          access = VK_ACCESS_2_NONE;
 
-    newState.queue = in_dstQueue;
-    
     switch ( in_state )
     {
     case CRVK_BUFFER_STATE_GRAPHIC_READ:
     {
         // index input 
-        if( m_currentState.usage & VK_BUFFER_USAGE_INDEX_BUFFER_BIT ) // we just read 
+        if( m_bufferHandler->usage & VK_BUFFER_USAGE_INDEX_BUFFER_BIT ) // we just read 
         {
-            newState.stage = VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT;
-            newState.access = VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT;
+            stage = VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT;
+            access = VK_ACCESS_2_VERTEX_ATTRIBUTE_READ_BIT;
         }
         // vertex input 
-        else if ( m_currentState.usage & VK_BUFFER_USAGE_VERTEX_BUFFER_BIT ) // we just read 
+        else if ( m_bufferHandler->usage & VK_BUFFER_USAGE_VERTEX_BUFFER_BIT ) // we just read 
         {
-            newState.stage = VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT;
-            newState.access = VK_ACCESS_2_INDEX_READ_BIT;
+            stage = VK_PIPELINE_STAGE_2_VERTEX_INPUT_BIT;
+            access = VK_ACCESS_2_INDEX_READ_BIT;
         }
         // indirect input
-        else if( m_currentState.usage & VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT )
+        else if( m_bufferHandler->usage & VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT )
         {
-            newState.stage = VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT;
-            newState.access = VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT;
+            stage = VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT;
+            access = VK_ACCESS_2_INDIRECT_COMMAND_READ_BIT;
         }
         // shader storage
-        else if( m_currentState.usage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT )
+        else if( m_bufferHandler->usage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT )
         {
-            newState.stage = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
-            newState.access = VK_ACCESS_2_SHADER_STORAGE_READ_BIT;
+            stage = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
+            access = VK_ACCESS_2_SHADER_STORAGE_READ_BIT;
         }
         else
         {
-            newState.stage = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
-            newState.access = VK_ACCESS_2_SHADER_READ_BIT;
+            stage = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
+            access = VK_ACCESS_2_SHADER_READ_BIT;
         }
     } break;
     case CRVK_BUFFER_STATE_GRAPHIC_WRITE:
     {
         // shader storage
-        if( m_currentState.usage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT )
+        if( m_bufferHandler->usage & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT )
         {
-            newState.stage = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
-            newState.access = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
+            stage = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
+            access = VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
         }
         else
         {
-            newState.stage = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
-            newState.access = VK_ACCESS_2_SHADER_WRITE_BIT;
+            stage = VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
+            access = VK_ACCESS_2_SHADER_WRITE_BIT;
         }
     } break;
     case CRVK_BUFFER_STATE_COMPUTE_READ:
     {
-        newState.stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
-        newState.access = VK_ACCESS_2_SHADER_READ_BIT;
+        stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+        access = VK_ACCESS_2_SHADER_READ_BIT;
     } break;
     case CRVK_BUFFER_STATE_COMPUTE_WRITE:
     {
-        newState.stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
-        newState.access = VK_ACCESS_2_SHADER_WRITE_BIT;
+        stage = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+        access = VK_ACCESS_2_SHADER_WRITE_BIT;
     } break;
     case CRVK_BUFFER_STATE_GPU_COPY_SRC:
     {
-        newState.stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
-        newState.access = VK_ACCESS_2_TRANSFER_READ_BIT;
+        stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+        access = VK_ACCESS_2_TRANSFER_READ_BIT;
     } break;
     case CRVK_BUFFER_STATE_GPU_COPY_DST:
     {
-        newState.stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
-        newState.access = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+        stage = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+        access = VK_ACCESS_2_TRANSFER_WRITE_BIT;
     } break;
     case CRVK_BUFFER_STATE_CPU_COPY_SRC:
     {
-        newState.stage = VK_PIPELINE_STAGE_2_HOST_BIT;
-        newState.access = VK_ACCESS_2_HOST_READ_BIT;
+        stage = VK_PIPELINE_STAGE_2_HOST_BIT;
+        access = VK_ACCESS_2_HOST_READ_BIT;
     } break;
     case CRVK_BUFFER_STATE_CPU_COPY_DST:
     {
-        newState.stage = VK_PIPELINE_STAGE_2_HOST_BIT;
-        newState.access = VK_ACCESS_2_HOST_WRITE_BIT;
+        stage = VK_PIPELINE_STAGE_2_HOST_BIT;
+        access = VK_ACCESS_2_HOST_WRITE_BIT;
     } break;
     }
 
     // nothing to change
-    if( newState == oldState )
+    if (( stage == m_bufferHandler->stage ) && ( access == m_bufferHandler->access ) && ( in_dstQueue == m_bufferHandler->queue ) )
         return;
 
     VkBufferMemoryBarrier2 barrier{};
@@ -266,19 +290,19 @@ void crvkBuffer::StateTransition(   const VkCommandBuffer in_commandBuffer,
     barrier.pNext = nullptr;
 
     // source state
-    barrier.srcStageMask = oldState.stage;
-    barrier.srcAccessMask = oldState.access;
-    barrier.srcQueueFamilyIndex = oldState.queue;
+    barrier.srcStageMask = m_bufferHandler->stage;
+    barrier.srcAccessMask = m_bufferHandler->access;
+    barrier.srcQueueFamilyIndex = m_bufferHandler->queue;
     
     // destine state 
-    barrier.dstStageMask = newState.stage;
-    barrier.dstAccessMask = newState.access;
-    barrier.dstQueueFamilyIndex = newState.queue;
+    barrier.dstStageMask = stage;
+    barrier.dstAccessMask = access;
+    barrier.dstQueueFamilyIndex = queue;
     
-    // region
-    barrier.buffer = m_buffer;
-    barrier.offset = in_offset;
-    barrier.size = in_size;
+    // since we map the current buffer state, we change whole the buffer, not only some regions 
+    barrier.buffer = m_bufferHandler->buffer;
+    barrier.offset = 0;
+    barrier.size = VK_WHOLE_SIZE;
 
     VkDependencyInfo depInfo{};
     depInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
@@ -293,8 +317,24 @@ void crvkBuffer::StateTransition(   const VkCommandBuffer in_commandBuffer,
     vkCmdPipelineBarrier2( in_commandBuffer, &depInfo );
 
     // update buffer state
-    m_currentState = newState;
+    m_bufferHandler->queue = queue;
+    m_bufferHandler->stage = stage;
+    m_bufferHandler->access = access;
 }
+
+/*
+==============================================
+crvkBuffer::Handle
+==============================================
+*/
+VkBuffer crvkBuffer::Handle( void ) const
+{
+    if ( m_bufferHandler == nullptr )
+        return nullptr;
+
+    return m_bufferHandler->buffer;
+}
+
 
 /*
 ==============================================

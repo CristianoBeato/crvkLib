@@ -40,6 +40,8 @@ enum crvkBufferState_t : uint8_t
     CRVK_BUFFER_STATE_CPU_COPY_DST          /// buffer is going to be used on CPU copy operation as destine
 };
 
+typedef struct crvkBufferHandler_t;
+
 /// @brief our buffer base structure 
 class crvkBuffer 
 {
@@ -97,43 +99,17 @@ public:
     
     /// @brief 
     /// @param in_commandBuffer 
-    /// @param in_srcQueue 
+    /// @param in_state 
     /// @param in_dstQueue 
-    virtual void        StateTransition(    const VkCommandBuffer in_commandBuffer,
-                                            const crvkBufferState_t in_state,
-                                            const uint32_t in_dstQueue,
-                                            const VkDeviceSize in_offset,
-                                            const VkDeviceSize in_size );
+    virtual void        StateTransition( const VkCommandBuffer in_commandBuffer, const crvkBufferState_t in_state, const uint32_t in_dstQueue );
 
     /// @brief 
     /// @param  
     /// @return 
-    virtual VkBuffer    Handle( void ) const { return m_buffer; };
+    virtual VkBuffer    Handle( void ) const;
 
 protected:
-    /// @brief helper to keep buffer state transition control
-    struct state_t
-    {
-        VkBufferUsageFlags      usage;      // buffer usage 
-        VkMemoryPropertyFlags   property;   // memory properties 
-        VkPipelineStageFlags2   stage;      // current buffer pipeline stage
-        VkAccessFlags2          access;     // buffer acess flags
-        uint32_t                queue;      // buffer current queue
-
-        bool operator== ( const state_t &r )
-        {
-            if (( usage != r.usage ) || ( property != r.property ) || ( stage != r.stage ) || ( access != r.access ) || ( queue != r.queue ) )
-                return false;
-
-            return true;
-        }
-    };
-
-    state_t                 m_currentState; // acess state 
-    VkBuffer                m_buffer;       // buffer handler 
-    VkDeviceMemory          m_memory;       // buffer memory acess 
-    crvkDevice*             m_device;       // device acess 
-
+    crvkBufferHandler_t*    m_bufferHandler;
 private:
     crvkBuffer( const crvkBuffer & ) = delete;
     crvkBuffer operator=( const crvkBuffer & ) = delete;
@@ -153,7 +129,7 @@ public:
     /// @param srcBuffer 
     virtual void        CopyFromBuffer( const VkBuffer in_srcBuffer, const VkBufferCopy2* in_regions, const uint32_t in_count ) override;
     virtual void        CopyToBuffer( const VkBuffer in_dstBuffer, const VkBufferCopy2* in_regions, const uint32_t in_count ) override;
-    virtual void        StateTransition( const crvkBufferState_t in_state, const uint32_t in_dstQueue, const VkDeviceSize in_offset, const VkDeviceSize in_size );
+    virtual void        StateTransition( const crvkBufferState_t in_state, const uint32_t in_dstQueue );
     virtual void*       Map( const uintptr_t in_offset, const size_t in_size, const crvkBufferMapAccess_t in_acces ) override;
     virtual void        Unmap( const crvkBufferState_t in_state );
 
@@ -196,8 +172,8 @@ public:
     virtual void    Destroy( void ) override;
     virtual void    SubData( const void* in_data, const uintptr_t in_offset, const size_t in_size ) const override;
     virtual void    GetSubData( void* in_data, const uintptr_t in_offset, const size_t in_size ) const override;
-    virtual void*   Map( const uintptr_t in_offset, const size_t in_size, const uint32_t in_flags ) const override;
-    virtual void    Unmap( void ) const override;
+    virtual void*   Map( const uintptr_t in_offset, const size_t in_size, const uint32_t in_flags ) override;
+    virtual void    Unmap( void ) override;
     virtual void    Flush( const uintptr_t in_offset, const size_t in_size ) const override;
     
 private:
