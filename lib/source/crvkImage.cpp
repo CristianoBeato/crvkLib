@@ -23,6 +23,8 @@
 
 typedef struct crvkImageHandle_t
 {
+    uint16_t                levels = 1;
+    uint16_t                layers = 1;
     uint32_t                queue = VK_QUEUE_FAMILY_IGNORED;
     VkFormat                format = VK_FORMAT_UNDEFINED;
     VkImageViewType         type = VK_IMAGE_VIEW_TYPE_1D;
@@ -83,10 +85,13 @@ bool crvkImage::Create(
     VkResult result = VK_SUCCESS;
     VkMemoryRequirements memReq{};
     
-    m_imageHandle->device = in_device->Device();
-    m_imageHandle->type = in_type;
-    m_imageHandle->format = in_format;
-    m_imageHandle->samples = in_samples;
+    // fail proof 
+    m_imageHandle->levels = std::max( in_levels, (unsigned short)1 ); // fail proof, this are never 0, we need atleast 1 level 
+    m_imageHandle->layers = std::max( in_layers, (unsigned short)1 ); // fail proof, this are never 0, we need atleast 1 layer 
+    m_imageHandle->type = in_type;  // texture dimension type 
+    m_imageHandle->format = in_format; // pixel format 
+    m_imageHandle->samples = in_samples; // samples 
+    m_imageHandle->device = in_device->Device(); // device 
     
     ///
     /// Create the image handler 
@@ -105,23 +110,19 @@ bool crvkImage::Create(
 
     switch ( m_imageHandle->type )
     {
-        case VK_IMAGE_VIEW_TYPE_1D:
+        case VK_IMAGE_VIEW_TYPE_1D: // 1d texture 
             imageCI.imageType = VK_IMAGE_TYPE_1D;
             break;
-        case VK_IMAGE_VIEW_TYPE_2D:
+        case VK_IMAGE_VIEW_TYPE_2D: // 2d texture 
         case VK_IMAGE_VIEW_TYPE_1D_ARRAY:
             imageCI.imageType = VK_IMAGE_TYPE_2D;
             break;
-        case VK_IMAGE_VIEW_TYPE_3D:
+        case VK_IMAGE_VIEW_TYPE_3D: // 3d texture 
         case VK_IMAGE_VIEW_TYPE_CUBE:
         case VK_IMAGE_VIEW_TYPE_2D_ARRAY:
         case VK_IMAGE_VIEW_TYPE_CUBE_ARRAY:
             imageCI.imageType = VK_IMAGE_TYPE_3D;
             break;
-    
-    default:
-        // cast a error:
-        break;
     }
 
     switch ( in_format )
@@ -231,6 +232,11 @@ void crvkImage::Destroy(void)
     }
 }
 
+/*
+==============================================
+crvkImage::Handle
+==============================================
+*/
 VkImage crvkImage::Handle( void ) const 
 {
     if ( m_imageHandle == nullptr )
@@ -239,29 +245,37 @@ VkImage crvkImage::Handle( void ) const
     return m_imageHandle->image;
 }
 
+/*
+==============================================
+crvkImage::View
+==============================================
+*/
 VkImageView crvkImage::View( void ) const
 {
     if ( m_imageHandle == nullptr )
         return nullptr;
 
+    return m_imageHandle->view;
 }
 
+/*
+==============================================
+crvkImage::View
+==============================================
+*/
 VkDeviceMemory crvkImage::Memory( void ) const
 {
     if ( m_imageHandle == nullptr )
         return nullptr;
 
+    return m_imageHandle->memory;
 }
 
 void crvkImage::StateTransition( 
         const VkCommandBuffer in_commandBuffer, 
         const crvkImageState_t in_state,
         const VkImageAspectFlags in_aspect, 
-        const uint32_t in_dstQueue, 
-        const uint32_t in_baseMipLevel,
-        const uint32_t in_levelCount,
-        const uint32_t in_baseArrayLayer,
-        const uint32_t in_layerCount )
+        const uint32_t in_dstQueue )
 {
     VkPipelineStageFlags2   stage = VK_PIPELINE_STAGE_2_NONE;
     VkAccessFlags2          access = VK_ACCESS_2_NONE;
@@ -334,12 +348,13 @@ void crvkImage::StateTransition(
         } break;
     }
 
+    // we update the whole image, since we map the current texture state change, we can't handle sections
     VkImageSubresourceRange subresourceRange{};
     subresourceRange.aspectMask = ( in_aspect == VK_IMAGE_ASPECT_NONE ) ? m_imageHandle->aspect : in_aspect; // if no aspect set, use from image
-    subresourceRange.baseMipLevel = in_baseMipLevel;
-    subresourceRange.levelCount = in_levelCount;
-    subresourceRange.baseArrayLayer = in_baseArrayLayer;
-    subresourceRange.layerCount = in_layerCount;
+    subresourceRange.baseMipLevel = 0;
+    subresourceRange.levelCount = m_imageHandle->levels;
+    subresourceRange.baseArrayLayer = 0;
+    subresourceRange.layerCount = m_imageHandle->layers;
 
     VkImageMemoryBarrier2 barrier{};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
@@ -505,14 +520,15 @@ void crvkImageStatic::Destroy( void )
     crvkImage::Destroy();
 }
 
+/*
+==============================================
+crvkImage::CopyFromBuffer
+==============================================
+*/
 void crvkImageStatic::CopyFromBuffer( const VkBuffer in_srcBuffer, const VkBufferImageCopy2* in_copyRegions, const uint32_t in_count )
 {
     VkResult result = VK_SUCCESS;
     VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_NONE;
-    uint32_t minMip = UINT32_MAX;
-    uint32_t maxMip = 0;
-    uint32_t minLayer = UINT32_MAX;
-    uint32_t maxLayer = 0;
     crvkDeviceQueue* queue = nullptr;
 
     // reset the command buffer 
@@ -532,23 +548,11 @@ void crvkImageStatic::CopyFromBuffer( const VkBuffer in_srcBuffer, const VkBuffe
     // get the ranges
     for (uint32_t i = 0; i < in_count; ++i) 
     {
-        const auto& s = in_copyRegions[i].imageSubresource;
-        aspectMask |= s.aspectMask;
-        minMip = std::min( minMip, s.mipLevel );
-        maxMip = std::max( maxMip, s.mipLevel );
-        minLayer = std::min( minLayer, s.baseArrayLayer );
-        maxLayer = std::max( maxLayer, s.baseArrayLayer + s.layerCount );
+        aspectMask |= in_copyRegions[i].imageSubresource.aspectMask;
     }
 
     // Layout transition UNDEFINED → TRANSFER_DST_OPTIMAL
-    StateTransition(    m_commandBuffer, 
-                        CRVK_IMAGE_STATE_GPU_COPY_DST, 
-                        aspectMask, 
-                        VK_QUEUE_FAMILY_IGNORED, 
-                        minMip, 
-                        maxMip - minMip + 1,
-                        minLayer, 
-                        std::max( 1u, maxLayer - minLayer ) );
+    StateTransition( m_commandBuffer, CRVK_IMAGE_STATE_GPU_COPY_DST, aspectMask, VK_QUEUE_FAMILY_IGNORED );
 
     // Finaliza e envia o comando
     vkEndCommandBuffer( m_commandBuffer );
@@ -581,7 +585,30 @@ void crvkImageStatic::CopyFromBuffer( const VkBuffer in_srcBuffer, const VkBuffe
     }
 }
 
+/*
+==============================================
+crvkImage::StateTransition
+==============================================
+*/
+void crvkImageStatic::StateTransition( const VkCommandBuffer in_commandBuffer, const crvkImageState_t in_state, const VkImageAspectFlags in_aspect, const uint32_t in_dstQueue )
+{
+    crvkImage::StateTransition( m_commandBuffer, in_state, in_aspect, in_dstQueue );
+}
+
 //=======================================================================================================================
+
+bool crvkImageStaging::Create(const crvkDevice *in_device, const VkImageViewType in_type, const VkFormat in_format, const uint16_t in_levels, const uint16_t in_layers, const uint32_t in_width, const uint32_t in_height, const uint32_t in_depth)
+{
+    VkMemoryRequirements memReq{}; 
+    crvkImageStatic::Create( in_device, in_type, in_format, in_levels, in_layers, in_width, in_height, in_depth );
+
+    // get the image size    
+    vkGetImageMemoryRequirements( m_imageHandle->device, m_imageHandle->image, &memReq );
+    
+    
+
+    return true;
+}
 
 /*
 ==============================================
@@ -592,13 +619,13 @@ void crvkImageStaging::Destroy(void)
 {
     if( m_staging != nullptr )
     {
-        vkDestroyBuffer( m_device->Device(), m_staging, k_allocationCallbacks );
+        vkDestroyBuffer( m_imageHandle->device, m_staging, k_allocationCallbacks );
         m_staging = nullptr;
     };
 
     if ( m_memoryStaging != nullptr )
     {
-        vkFreeMemory( m_device->Device(), m_memoryStaging, k_allocationCallbacks );
+        vkFreeMemory( m_imageHandle->device, m_memoryStaging, k_allocationCallbacks );
         m_memoryStaging = nullptr;
     }
 
@@ -623,5 +650,5 @@ void crvkImageStaging::SubData(const void *in_data, const uintptr_t in_offset, c
 }
 
 void crvkImageStaging::GetSubData(void *in_data, const uintptr_t in_offset, const size_t in_size)
-{
+{   
 }

@@ -35,6 +35,16 @@ enum crvkImageState_t : uint8_t
     CRVK_IMAGE_STATE_GPU_COPY_DST,
 };
 
+typedef struct crvkImageRegion_t
+{
+    uint32_t    width = 0;
+    uint32_t    hight = 0;
+    uint32_t    depth = 0;
+    uint32_t    level = 0;
+    uint32_t    array = 0;
+    void*       pixels = nullptr;
+};
+
 typedef struct crvkImageHandle_t crvkImageHandle_t;
 
 // basic image object, just create the structure
@@ -59,20 +69,8 @@ public:
     virtual void    CopyFromBuffer( const VkBuffer in_srcBuffer, const VkBufferImageCopy2* in_copyRegions, const uint32_t in_count ) {};
     virtual void    CopyToBuffer( const VkBuffer in_dstBuffer, const VkBufferImageCopy2* in_copyRegions, const uint32_t in_count ) {};
     virtual void    SubData( const void* in_data, const uintptr_t in_offset, const size_t in_size ) {};
-    virtual void    GetSubData( void* in_data, const uintptr_t in_offset, const size_t in_size ) {};    
-    
-    /// @brief 
-    /// @param in_commandBuffer 
-    /// @param in_srcQueue 
-    /// @param in_dstQueue 
-    virtual void        StateTransition(    const VkCommandBuffer in_commandBuffer, 
-                                            const crvkImageState_t in_state, 
-                                            const VkImageAspectFlags in_aspect,
-                                            const uint32_t in_dstQueue, 
-                                            const uint32_t in_baseMipLevel,
-                                            const uint32_t in_levelCount,
-                                            const uint32_t in_baseArrayLayer,
-                                            const uint32_t in_layerCount );
+    virtual void    GetSubData( void* in_data, const uintptr_t in_offset, const size_t in_size ) {};        
+    virtual void    StateTransition( const VkCommandBuffer in_commandBuffer, const crvkImageState_t in_state, const VkImageAspectFlags in_aspect, const uint32_t in_dstQueue );
     
     VkImage         Handle( void ) const;
     VkImageView     View( void ) const;
@@ -102,6 +100,7 @@ public:
     virtual void    Destroy( void ) override;
     virtual void    CopyFromBuffer( const VkBuffer in_srcBuffer, const VkBufferImageCopy2* in_copyRegions, const uint32_t in_count ) override;
     virtual void    CopyToBuffer( const VkBuffer in_dstBuffer, const VkBufferImageCopy2* in_copyRegions, const uint32_t in_count ) override;
+    virtual void    StateTransition( const VkCommandBuffer in_commandBuffer, const crvkImageState_t in_state, const VkImageAspectFlags in_aspect, const uint32_t in_dstQueue );
 
 protected:
     VkSemaphoreSubmitInfo   SignalLastUse( void );
