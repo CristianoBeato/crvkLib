@@ -66,10 +66,10 @@ public:
         const VkSampleCountFlagBits in_samples = VK_SAMPLE_COUNT_1_BIT );
         
     virtual void    Destroy( void );
-    virtual void    CopyFromBuffer( const VkBuffer in_srcBuffer, const VkBufferImageCopy2* in_copyRegions, const uint32_t in_count ) {};
-    virtual void    CopyToBuffer( const VkBuffer in_dstBuffer, const VkBufferImageCopy2* in_copyRegions, const uint32_t in_count ) {};
-    virtual void    SubData( const void* in_data, const uintptr_t in_offset, const size_t in_size ) {};
-    virtual void    GetSubData( void* in_data, const uintptr_t in_offset, const size_t in_size ) {};        
+    virtual bool    CopyFromBuffer( const VkBuffer in_srcBuffer, const VkBufferImageCopy2* in_copyRegions, const uint32_t in_count ) { return false; };
+    virtual bool    CopyToBuffer( const VkBuffer in_dstBuffer, const VkBufferImageCopy2* in_copyRegions, const uint32_t in_count ) { return false; };
+    virtual bool    SubData( const void* in_data, const VkBufferImageCopy2* in_copyRegions, const uint32_t in_count ) { return false; };
+    virtual bool    GetSubData( void* in_data, const VkBufferImageCopy2* in_copyRegions, const uint32_t in_count ) { return false; }; 
     virtual void    StateTransition( const VkCommandBuffer in_commandBuffer, const crvkImageState_t in_state, const VkImageAspectFlags in_aspect, const uint32_t in_dstQueue );
     
     VkImage         Handle( void ) const;
@@ -98,8 +98,8 @@ public:
         const VkSampleCountFlagBits in_samples = VK_SAMPLE_COUNT_1_BIT ) override;
         
     virtual void    Destroy( void ) override;
-    virtual void    CopyFromBuffer( const VkBuffer in_srcBuffer, const VkBufferImageCopy2* in_copyRegions, const uint32_t in_count ) override;
-    virtual void    CopyToBuffer( const VkBuffer in_dstBuffer, const VkBufferImageCopy2* in_copyRegions, const uint32_t in_count ) override;
+    virtual bool    CopyFromBuffer( const VkBuffer in_srcBuffer, const VkBufferImageCopy2* in_copyRegions, const uint32_t in_count ) override;
+    virtual bool    CopyToBuffer( const VkBuffer in_dstBuffer, const VkBufferImageCopy2* in_copyRegions, const uint32_t in_count ) override;
     virtual void    StateTransition( const VkCommandBuffer in_commandBuffer, const crvkImageState_t in_state, const VkImageAspectFlags in_aspect, const uint32_t in_dstQueue );
 
 protected:
@@ -135,6 +135,8 @@ public:
         const uint32_t in_depth );
         
     virtual void    Destroy( void ) override;
+    virtual bool    SubData( const void* in_data, const VkBufferImageCopy2* in_copyRegions, const uint32_t in_count ) override;
+    virtual bool    GetSubData( void* in_data, const VkBufferImageCopy2* in_copyRegions, const uint32_t in_count ) override;
     
 private:
     VkBuffer        m_staging;

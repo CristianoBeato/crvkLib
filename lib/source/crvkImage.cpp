@@ -525,14 +525,19 @@ void crvkImageStatic::Destroy( void )
 crvkImage::CopyFromBuffer
 ==============================================
 */
-void crvkImageStatic::CopyFromBuffer( const VkBuffer in_srcBuffer, const VkBufferImageCopy2* in_copyRegions, const uint32_t in_count )
+bool crvkImageStatic::CopyFromBuffer( const VkBuffer in_srcBuffer, const VkBufferImageCopy2* in_copyRegions, const uint32_t in_count )
 {
     VkResult result = VK_SUCCESS;
     VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_NONE;
     crvkDeviceQueue* queue = nullptr;
 
     // reset the command buffer 
-    vkResetCommandBuffer( m_commandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT );
+    result = vkResetCommandBuffer( m_commandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT );
+    if (result != VK_SUCCESS) 
+    {
+        crvkAppendError("crvkImageStatic::CopyFromBuffer::vkResetCommandBuffer", result );
+        return false;
+    }
 
     // begin record image commands 
     VkCommandBufferBeginInfo beginInfo = {};
@@ -542,7 +547,7 @@ void crvkImageStatic::CopyFromBuffer( const VkBuffer in_srcBuffer, const VkBuffe
     if (result != VK_SUCCESS) 
     {
         crvkAppendError("crvkImageStatic::CopyFromBuffer::vkBeginCommandBuffer", result );
-        return;
+        return false;
     }
 
     // get the ranges
@@ -554,7 +559,18 @@ void crvkImageStatic::CopyFromBuffer( const VkBuffer in_srcBuffer, const VkBuffe
     // Layout transition UNDEFINED → TRANSFER_DST_OPTIMAL
     StateTransition( m_commandBuffer, CRVK_IMAGE_STATE_GPU_COPY_DST, aspectMask, VK_QUEUE_FAMILY_IGNORED );
 
-    // Finaliza e envia o comando
+    // stream from buffer to the image
+    VkCopyBufferToImageInfo2 copyBufferToImage{};
+    copyBufferToImage.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_TO_IMAGE_INFO_2;
+    copyBufferToImage.pNext = nullptr;
+    copyBufferToImage.srcBuffer = in_srcBuffer;
+    copyBufferToImage.dstImage = m_imageHandle->image;
+    copyBufferToImage.dstImageLayout = m_imageHandle->layout;
+    copyBufferToImage.regionCount = in_count;
+    copyBufferToImage.pRegions = in_copyRegions;
+    vkCmdCopyBufferToImage2( m_commandBuffer, &copyBufferToImage );
+
+    // finish state transiotion and copy commands
     vkEndCommandBuffer( m_commandBuffer );
 
     // Wait for the last copy to finish, or buffer to be released  
@@ -581,8 +597,87 @@ void crvkImageStatic::CopyFromBuffer( const VkBuffer in_srcBuffer, const VkBuffe
     if( result != VK_SUCCESS )
     {
         crvkAppendError( "crvkBufferStaging::SubData::vkQueueSubmit2", result );
-        return;
+        return false;
     }
+
+    return true;
+}
+
+/*
+==============================================
+crvkImage::CopyToBuffer
+==============================================
+*/
+bool crvkImageStatic::CopyToBuffer( const VkBuffer in_dstBuffer, const VkBufferImageCopy2* in_copyRegions, const uint32_t in_count )
+{
+    VkResult result = VK_SUCCESS;
+    VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_NONE;
+    crvkDeviceQueue* queue = nullptr;
+    
+    // reset the command buffer 
+    result = vkResetCommandBuffer( m_commandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT );
+    if (result != VK_SUCCESS) 
+    {
+        crvkAppendError("crvkImageStatic::CopyToBuffer::vkResetCommandBuffer", result );
+        return false;
+    }
+
+    // begin record image commands 
+    VkCommandBufferBeginInfo beginInfo = {};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    result = vkBeginCommandBuffer( m_commandBuffer, &beginInfo );
+    if (result != VK_SUCCESS) 
+    {
+        crvkAppendError("crvkImageStatic::CopyToBuffer::vkBeginCommandBuffer", result );
+        return false;
+    }
+ 
+    // Layout transition UNDEFINED → TRANSFER_SRC_OPTIMAL
+    StateTransition( m_commandBuffer, CRVK_IMAGE_STATE_GPU_COPY_SRC, aspectMask, VK_QUEUE_FAMILY_IGNORED );
+
+    // copy from image to buffer
+    VkCopyImageToBufferInfo2 copyImageToBuffer{};
+    copyImageToBuffer.sType = VK_STRUCTURE_TYPE_COPY_IMAGE_TO_BUFFER_INFO_2;
+    copyImageToBuffer.pNext = nullptr;
+    copyImageToBuffer.srcImage = m_imageHandle->image;
+    copyImageToBuffer.srcImageLayout = m_imageHandle->layout;
+    copyImageToBuffer.dstBuffer = in_dstBuffer;
+    copyImageToBuffer.regionCount = in_count;
+    copyImageToBuffer.pRegions = in_copyRegions;
+    vkCmdCopyImageToBuffer2( m_commandBuffer, &copyImageToBuffer );
+
+    // finish state transiotion and copy commands
+    vkEndCommandBuffer( m_commandBuffer );
+
+    // Wait for the last copy to finish, or buffer to be released  
+    VkSemaphoreSubmitInfo waitInfo[2] = 
+    {
+        WaitLastCopy(),
+        WaitLastUse(),
+    };
+
+    // signal to GPU to wait for the copy end before use
+    VkSemaphoreSubmitInfo signalInfo = SignalLastCopy();
+
+    VkCommandBufferSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+    submitInfo.commandBuffer = m_commandBuffer;
+    submitInfo.pNext = nullptr;
+    
+    if ( m_device->HasTransferQueue() )
+        queue = m_device->GetQueue( CRVK_DEVICE_QUEUE_TRANSFER );
+    else
+        queue = m_device->GetQueue( CRVK_DEVICE_QUEUE_GRAPHICS );       
+
+    result = queue->Submit( waitInfo, 2, &submitInfo, 1, &signalInfo, 1, nullptr );
+    if( result != VK_SUCCESS )
+    {
+        crvkAppendError( "crvkBufferStaging::SubData::vkQueueSubmit2", result );
+        return false;
+    }
+
+    return true;
 }
 
 /*
@@ -597,15 +692,61 @@ void crvkImageStatic::StateTransition( const VkCommandBuffer in_commandBuffer, c
 
 //=======================================================================================================================
 
+/*
+==============================================
+crvkImageStaging::Create
+==============================================
+*/
 bool crvkImageStaging::Create(const crvkDevice *in_device, const VkImageViewType in_type, const VkFormat in_format, const uint16_t in_levels, const uint16_t in_layers, const uint32_t in_width, const uint32_t in_height, const uint32_t in_depth)
 {
     VkMemoryRequirements memReq{}; 
+    VkResult result = VK_SUCCESS;
+    
+    // create image and command buffer 
     crvkImageStatic::Create( in_device, in_type, in_format, in_levels, in_layers, in_width, in_height, in_depth );
 
     // get the image size    
     vkGetImageMemoryRequirements( m_imageHandle->device, m_imageHandle->image, &memReq );
     
-    
+    VkBufferCreateInfo bufferInfo{};
+    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferInfo.size = memReq.size;
+    bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+
+    // we use tranfer queue for buffer content
+    if( in_device->HasTransferQueue() )
+        bufferInfo.sharingMode = VK_SHARING_MODE_CONCURRENT;
+    else
+        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    result = vkCreateBuffer( m_imageHandle->device, &bufferInfo, k_allocationCallbacks, &m_staging );
+    if ( result != VK_SUCCESS) 
+    {
+        Destroy();
+        crvkAppendError( "crvkBufferStatic::Create::vkCreateBuffer", result );
+        return false;
+    }
+
+    vkGetBufferMemoryRequirements( m_imageHandle->device, m_staging, &memReq );
+
+    // try find the required memory 
+    VkMemoryAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = memReq.size;
+    allocInfo.memoryTypeIndex = in_device->FindMemoryType( memReq.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT );
+    result = vkAllocateMemory( m_imageHandle->device, &allocInfo, k_allocationCallbacks, &m_memoryStaging    );
+    if ( result != VK_SUCCESS ) 
+    {
+        crvkAppendError( "crvkBufferStatic::Create::vkAllocateMemory", result );
+        return false;
+    }
+
+    result = vkBindBufferMemory( m_imageHandle->device, m_staging, m_memoryStaging, 0 );
+    if ( result != VK_SUCCESS )
+    {
+        crvkAppendError( "crvkBufferStatic::Create::vkBindBufferMemory", result );
+        return false;
+    }
 
     return true;
 }
@@ -632,23 +773,104 @@ void crvkImageStaging::Destroy(void)
     crvkImageStatic::Destroy();
 }
 
-void crvkImageStaging::SubData(const void *in_data, const uintptr_t in_offset, const size_t in_size)
+/*
+==============================================
+crvkImageStaging::SubData
+==============================================
+*/
+bool crvkImageStaging::SubData( const void* in_data, const VkBufferImageCopy2* in_copyRegions, const uint32_t in_count )
 {
-    // copy the content to the image stagin buffer 
-    void* mappedData = nullptr;
-    vkMapMemory( m_device->Device(), m_memoryStaging, in_offset, in_size, 0, &mappedData);
-    memcpy(mappedData, in_data, in_size );
-    vkUnmapMemory( m_device->Device(), m_memoryStaging );
+    VkResult result = VK_SUCCESS;
+    VkDeviceSize offset = UINT64_MAX;
+    VkDeviceSize size = 0;
+    uint64_t pixelCount = 0;
+    crvkFormat_t internalFormat = crvkFormat_t( m_imageHandle->format ); 
+    void* buff = nullptr;
 
-    // create a tem
-    VkCommandBufferBeginInfo beginInfo = {};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    vkBeginCommandBuffer( m_commandBuffer, &beginInfo);
+    // we need to calc the current source size
+    for ( uint32_t i = 0; i < in_count; i++)
+    {
+        auto r = in_copyRegions[i];
+        // get the minor offset 
+        offset = std::min( r.bufferOffset, offset );
+        uint32_t w = std::min( r.imageExtent.width, 1u );
+        uint32_t h = std::min( r.imageExtent.height, 1u );
+        uint32_t d = std::min( r.imageExtent.depth, 1u );
+        pixelCount += ( w * h * d );  
+    }
+    
+    if ( internalFormat.IsCompressed() )
+    {
+        // TODO: get the number blocks
 
+    }
+    else
+    {
+        // get the uncompressed image size
+        size = pixelCount * internalFormat.BytesPerPixel();
+    }    
 
+    // copy data to our CPU buffer 
+    result = vkMapMemory( m_imageHandle->device, m_memoryStaging, offset, size, 0, &buff );
+    std::memcpy( buff, in_data, size );
+    vkUnmapMemory( m_imageHandle->device, m_memoryStaging );
+    if( result != VK_SUCCESS )
+    {
+        crvkAppendError( "crvkImageStaging::SubData::vkMapMemory", result );
+        return false;
+    }    
+    
+    // upload from transfer buffer, to the image 
+    if( !CopyFromBuffer( m_staging, in_copyRegions, in_count ) )
+        return false;
+
+    return true;
 }
 
-void crvkImageStaging::GetSubData(void *in_data, const uintptr_t in_offset, const size_t in_size)
-{   
+/*
+==============================================
+crvkImageStaging::GetSubData
+==============================================
+*/
+bool crvkImageStaging::GetSubData( void* in_data, const VkBufferImageCopy2* in_copyRegions, const uint32_t in_count )
+{
+    VkResult result = VK_SUCCESS;
+    VkDeviceSize offset = UINT64_MAX;
+    VkDeviceSize size = 0;
+    uint64_t pixelCount = 0;
+    crvkFormat_t internalFormat = crvkFormat_t( m_imageHandle->format ); 
+    void* buff = nullptr;
+
+    // we need to calc the current source size
+    for ( uint32_t i = 0; i < in_count; i++)
+    {
+        auto r = in_copyRegions[i];
+        // get the minor offset 
+        offset = std::min( r.bufferOffset, offset );
+        uint32_t w = std::min( r.imageExtent.width, 1u );
+        uint32_t h = std::min( r.imageExtent.height, 1u );
+        uint32_t d = std::min( r.imageExtent.depth, 1u );
+        pixelCount += ( w * h * d );  
+    }
+    
+    if ( internalFormat.IsCompressed() )
+    {
+        // TODO: get the number blocks
+
+    }
+    else
+        size = pixelCount * internalFormat.BytesPerPixel(); // get the uncompressed image size
+   
+    // now we copy from image to the buffer
+    if( !CopyToBuffer( m_staging, in_copyRegions, in_count ) )
+        return false;
+
+    // wait for device end copy the image 
+    VkSemaphoreWaitInfo smWaitInfo{ VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO, nullptr, 0, 1, &m_copySemaphore }; 
+    vkWaitSemaphores( m_imageHandle->device, &smWaitInfo, UINT64_MAX );
+
+    // copy the content of the CPU buffer to the data pointer
+    vkMapMemory( m_imageHandle->device, m_memoryStaging, offset, size, 0, &buff );
+    std::memcpy( in_data, buff, size );
+    vkUnmapMemory( m_imageHandle->device, m_memoryStaging ); 
 }
