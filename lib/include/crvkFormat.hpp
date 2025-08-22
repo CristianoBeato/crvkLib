@@ -33,6 +33,7 @@ struct crvkFormat_t
     {
     }
 
+    const bool      IsCompressed( void ) const;
     const uint32_t  ComponetType( void ) const;
     const uint32_t  Components( void ) const;
     const uint32_t  BytesPerPixel( void ) const;

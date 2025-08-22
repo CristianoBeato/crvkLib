@@ -22,13 +22,139 @@
 #include "crvkPrecompiled.hpp"
 #include "crvkFormat.hpp"
 
+const bool crvkFormat_t::IsCompressed(void) const
+{
+    switch ( format )
+    {
+    case VK_FORMAT_BC1_RGB_UNORM_BLOCK:     // 0.5 bpp
+    case VK_FORMAT_BC1_RGB_SRGB_BLOCK:      // 0.5 bpp
+    case VK_FORMAT_BC1_RGBA_UNORM_BLOCK:    // 0.5 bpp
+    case VK_FORMAT_BC1_RGBA_SRGB_BLOCK:     // 0.5 bpp
+    case VK_FORMAT_BC2_UNORM_BLOCK:         // 1 bpp
+    case VK_FORMAT_BC2_SRGB_BLOCK:          // 1.0 bpp
+    case VK_FORMAT_BC3_UNORM_BLOCK:         // 1.0 bpp
+    case VK_FORMAT_BC3_SRGB_BLOCK:          // 1.0 bpp
+    case VK_FORMAT_BC4_UNORM_BLOCK:         // 0.5 bpp
+    case VK_FORMAT_BC4_SNORM_BLOCK:         // 1.0 bpp
+    case VK_FORMAT_BC5_UNORM_BLOCK:         // 8 bytes
+    case VK_FORMAT_BC5_SNORM_BLOCK:         // 
+    case VK_FORMAT_BC6H_UFLOAT_BLOCK:       // 
+    case VK_FORMAT_BC6H_SFLOAT_BLOCK:       // 
+    case VK_FORMAT_BC7_UNORM_BLOCK:         // 
+    case VK_FORMAT_BC7_SRGB_BLOCK:          // 
+    case VK_FORMAT_ETC2_R8G8B8_UNORM_BLOCK: // 
+    case VK_FORMAT_ETC2_R8G8B8_SRGB_BLOCK:
+    case VK_FORMAT_ETC2_R8G8B8A1_UNORM_BLOCK:
+    case VK_FORMAT_ETC2_R8G8B8A1_SRGB_BLOCK:
+    case VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK:
+    case VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK:
+    case VK_FORMAT_EAC_R11_UNORM_BLOCK:
+    case VK_FORMAT_EAC_R11_SNORM_BLOCK:
+    case VK_FORMAT_EAC_R11G11_UNORM_BLOCK:
+    case VK_FORMAT_EAC_R11G11_SNORM_BLOCK:
+    case VK_FORMAT_ASTC_4x4_UNORM_BLOCK:
+    case VK_FORMAT_ASTC_4x4_SRGB_BLOCK:
+    case VK_FORMAT_ASTC_5x4_UNORM_BLOCK:
+    case VK_FORMAT_ASTC_5x4_SRGB_BLOCK:
+    case VK_FORMAT_ASTC_5x5_UNORM_BLOCK:
+    case VK_FORMAT_ASTC_5x5_SRGB_BLOCK:
+    case VK_FORMAT_ASTC_6x5_UNORM_BLOCK:
+    case VK_FORMAT_ASTC_6x5_SRGB_BLOCK:
+    case VK_FORMAT_ASTC_6x6_UNORM_BLOCK:
+    case VK_FORMAT_ASTC_6x6_SRGB_BLOCK:
+    case VK_FORMAT_ASTC_8x5_UNORM_BLOCK:
+    case VK_FORMAT_ASTC_8x5_SRGB_BLOCK:
+    case VK_FORMAT_ASTC_8x6_UNORM_BLOCK:
+    case VK_FORMAT_ASTC_8x6_SRGB_BLOCK:
+    case VK_FORMAT_ASTC_8x8_UNORM_BLOCK:
+    case VK_FORMAT_ASTC_8x8_SRGB_BLOCK:
+    case VK_FORMAT_ASTC_10x5_UNORM_BLOCK:
+    case VK_FORMAT_ASTC_10x5_SRGB_BLOCK:
+    case VK_FORMAT_ASTC_10x6_UNORM_BLOCK:
+    case VK_FORMAT_ASTC_10x6_SRGB_BLOCK:
+    case VK_FORMAT_ASTC_10x8_UNORM_BLOCK:
+    case VK_FORMAT_ASTC_10x8_SRGB_BLOCK:
+    case VK_FORMAT_ASTC_10x10_UNORM_BLOCK:
+    case VK_FORMAT_ASTC_10x10_SRGB_BLOCK:
+    case VK_FORMAT_ASTC_12x10_UNORM_BLOCK:
+    case VK_FORMAT_ASTC_12x10_SRGB_BLOCK:
+    case VK_FORMAT_ASTC_12x12_UNORM_BLOCK:
+    case VK_FORMAT_ASTC_12x12_SRGB_BLOCK:
+    case VK_FORMAT_ASTC_4x4_SFLOAT_BLOCK:
+    case VK_FORMAT_ASTC_5x4_SFLOAT_BLOCK:
+    case VK_FORMAT_ASTC_5x5_SFLOAT_BLOCK:
+    case VK_FORMAT_ASTC_6x5_SFLOAT_BLOCK:
+    case VK_FORMAT_ASTC_6x6_SFLOAT_BLOCK:
+    case VK_FORMAT_ASTC_8x5_SFLOAT_BLOCK:
+    case VK_FORMAT_ASTC_8x6_SFLOAT_BLOCK:
+    case VK_FORMAT_ASTC_8x8_SFLOAT_BLOCK:
+    case VK_FORMAT_ASTC_10x5_SFLOAT_BLOCK:
+    case VK_FORMAT_ASTC_10x6_SFLOAT_BLOCK:
+    case VK_FORMAT_ASTC_10x8_SFLOAT_BLOCK:
+    case VK_FORMAT_ASTC_10x10_SFLOAT_BLOCK:
+    case VK_FORMAT_ASTC_12x10_SFLOAT_BLOCK:
+    case VK_FORMAT_ASTC_12x12_SFLOAT_BLOCK:
+
+    case VK_FORMAT_G8B8G8R8_422_UNORM:
+    case VK_FORMAT_B8G8R8G8_422_UNORM:
+    case VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM:
+    case VK_FORMAT_G8_B8R8_2PLANE_420_UNORM:
+    case VK_FORMAT_G8_B8_R8_3PLANE_422_UNORM:
+    case VK_FORMAT_G8_B8R8_2PLANE_422_UNORM:
+    case VK_FORMAT_G8_B8_R8_3PLANE_444_UNORM:
+    case VK_FORMAT_R10X6_UNORM_PACK16:
+    case VK_FORMAT_R10X6G10X6_UNORM_2PACK16:
+    case VK_FORMAT_R10X6G10X6B10X6A10X6_UNORM_4PACK16:
+    case VK_FORMAT_G10X6B10X6G10X6R10X6_422_UNORM_4PACK16:
+    case VK_FORMAT_B10X6G10X6R10X6G10X6_422_UNORM_4PACK16:
+    case VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16:
+    case VK_FORMAT_G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16:
+    case VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16:
+    case VK_FORMAT_G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16:
+    case VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16:
+    case VK_FORMAT_R12X4_UNORM_PACK16:
+    case VK_FORMAT_R12X4G12X4_UNORM_2PACK16:
+    case VK_FORMAT_R12X4G12X4B12X4A12X4_UNORM_4PACK16:
+    case VK_FORMAT_G12X4B12X4G12X4R12X4_422_UNORM_4PACK16:
+    case VK_FORMAT_B12X4G12X4R12X4G12X4_422_UNORM_4PACK16:
+    case VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16:
+    case VK_FORMAT_G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16:
+    case VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16:
+    case VK_FORMAT_G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16:
+    case VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16:
+    case VK_FORMAT_G16B16G16R16_422_UNORM:
+    case VK_FORMAT_B16G16R16G16_422_UNORM:
+    case VK_FORMAT_G16_B16_R16_3PLANE_420_UNORM:
+    case VK_FORMAT_G16_B16R16_2PLANE_420_UNORM:
+    case VK_FORMAT_G16_B16_R16_3PLANE_422_UNORM:
+    case VK_FORMAT_G16_B16R16_2PLANE_422_UNORM:
+    case VK_FORMAT_G16_B16_R16_3PLANE_444_UNORM:
+    case VK_FORMAT_G8_B8R8_2PLANE_444_UNORM:
+    case VK_FORMAT_G10X6_B10X6R10X6_2PLANE_444_UNORM_3PACK16:
+    case VK_FORMAT_G12X4_B12X4R12X4_2PLANE_444_UNORM_3PACK16:
+    case VK_FORMAT_G16_B16R16_2PLANE_444_UNORM:
+    case VK_FORMAT_PVRTC1_2BPP_UNORM_BLOCK_IMG:
+    case VK_FORMAT_PVRTC1_4BPP_UNORM_BLOCK_IMG:
+    case VK_FORMAT_PVRTC2_2BPP_UNORM_BLOCK_IMG:
+    case VK_FORMAT_PVRTC2_4BPP_UNORM_BLOCK_IMG:
+    case VK_FORMAT_PVRTC1_2BPP_SRGB_BLOCK_IMG:
+    case VK_FORMAT_PVRTC1_4BPP_SRGB_BLOCK_IMG:
+    case VK_FORMAT_PVRTC2_2BPP_SRGB_BLOCK_IMG:
+    case VK_FORMAT_PVRTC2_4BPP_SRGB_BLOCK_IMG:
+    case VK_FORMAT_R16G16_SFIXED5_NV:
+        return true;
+
+    default: 
+        break;
+    };
+
+    return false;
+}
+
 const uint32_t crvkFormat_t::Components(void) const
 {
     switch ( format )
     {
-        case VK_FORMAT_UNDEFINED:
-            return 0;
-
         // red
         case VK_FORMAT_R8_UNORM:
         case VK_FORMAT_R8_SNORM:
@@ -54,12 +180,10 @@ const uint32_t crvkFormat_t::Components(void) const
         // depth 
         case VK_FORMAT_D16_UNORM:
         case VK_FORMAT_D32_SFLOAT:
-        
+
         // stencil
         case VK_FORMAT_S8_UINT:
-        {
             return 1;
-        };
 
         // Red Green
         case VK_FORMAT_R4G4_UNORM_PACK8:
@@ -83,16 +207,14 @@ const uint32_t crvkFormat_t::Components(void) const
         case VK_FORMAT_R64G64_UINT:
         case VK_FORMAT_R64G64_SINT:
         case VK_FORMAT_R64G64_SFLOAT:
-        // Depth X
+        // padded depth 
         case VK_FORMAT_X8_D24_UNORM_PACK32:
         
         // Depth Stencil
         case VK_FORMAT_D16_UNORM_S8_UINT:
         case VK_FORMAT_D24_UNORM_S8_UINT:
         case VK_FORMAT_D32_SFLOAT_S8_UINT:
-        {
             return 2;
-        }
         
         // RGB
         case VK_FORMAT_R5G6B5_UNORM_PACK16:
@@ -313,4 +435,325 @@ const uint32_t crvkFormat_t::Components(void) const
     }
 
     return 0; // make conpiler happy
+}
+
+const uint32_t crvkFormat_t::BytesPerPixel(void) const
+{
+    switch ( format )
+    {
+    // 1 byte per pixel ( 8 bits per pixel )
+    case VK_FORMAT_R4G4_UNORM_PACK8:
+    case VK_FORMAT_R8_UNORM:
+    case VK_FORMAT_R8_SNORM:
+    case VK_FORMAT_R8_USCALED:
+    case VK_FORMAT_R8_SSCALED:
+    case VK_FORMAT_R8_UINT:
+    case VK_FORMAT_R8_SINT:
+    case VK_FORMAT_R8_SRGB:
+    case VK_FORMAT_S8_UINT: // 8 bit stencil 
+    case VK_FORMAT_A8_UNORM: // 8 bit alpha
+        return 1;
+        break;
+
+    // 2 byte per pixel ( 16 bits per pixel )
+    case VK_FORMAT_R4G4B4A4_UNORM_PACK16:
+    case VK_FORMAT_B4G4R4A4_UNORM_PACK16:
+    case VK_FORMAT_R5G6B5_UNORM_PACK16:
+    case VK_FORMAT_B5G6R5_UNORM_PACK16:
+    case VK_FORMAT_R5G5B5A1_UNORM_PACK16:
+    case VK_FORMAT_B5G5R5A1_UNORM_PACK16:
+    case VK_FORMAT_A1R5G5B5_UNORM_PACK16:
+    case VK_FORMAT_R8G8_UNORM:
+    case VK_FORMAT_R8G8_SNORM:
+    case VK_FORMAT_R8G8_USCALED:
+    case VK_FORMAT_R8G8_SSCALED:
+    case VK_FORMAT_R8G8_UINT:
+    case VK_FORMAT_R8G8_SINT:
+    case VK_FORMAT_R8G8_SRGB:
+    case VK_FORMAT_R16_UNORM:
+    case VK_FORMAT_R16_SNORM:
+    case VK_FORMAT_R16_USCALED:
+    case VK_FORMAT_R16_SSCALED:
+    case VK_FORMAT_R16_UINT:
+    case VK_FORMAT_R16_SINT:
+    case VK_FORMAT_R16_SFLOAT:
+    case VK_FORMAT_D16_UNORM: // 16 bit depth
+    case VK_FORMAT_A1B5G5R5_UNORM_PACK16: // 1 bit alpha 5 bit blue 5 bit green 5 bit red
+        return 2;
+
+    // 3 bytes per pixel ( 24 bits per pixel )
+    case VK_FORMAT_R8G8B8_UNORM:
+    case VK_FORMAT_R8G8B8_SNORM:
+    case VK_FORMAT_R8G8B8_USCALED:
+    case VK_FORMAT_R8G8B8_SSCALED:
+    case VK_FORMAT_R8G8B8_UINT:
+    case VK_FORMAT_R8G8B8_SINT:
+    case VK_FORMAT_R8G8B8_SRGB:
+    case VK_FORMAT_B8G8R8_UNORM:
+    case VK_FORMAT_B8G8R8_SNORM:
+    case VK_FORMAT_B8G8R8_USCALED:
+    case VK_FORMAT_B8G8R8_SSCALED:
+    case VK_FORMAT_B8G8R8_UINT:
+    case VK_FORMAT_B8G8R8_SINT:
+    case VK_FORMAT_B8G8R8_SRGB:
+    case VK_FORMAT_D16_UNORM_S8_UINT: // 24 depth + 8 stencil
+        return 3;
+
+    // 4 bytes per pixel ( 32 bits per pixel )
+    case VK_FORMAT_R8G8B8A8_UNORM:
+    case VK_FORMAT_R8G8B8A8_SNORM:
+    case VK_FORMAT_R8G8B8A8_USCALED:
+    case VK_FORMAT_R8G8B8A8_SSCALED:
+    case VK_FORMAT_R8G8B8A8_UINT:
+    case VK_FORMAT_R8G8B8A8_SINT:
+    case VK_FORMAT_R8G8B8A8_SRGB:
+    case VK_FORMAT_B8G8R8A8_UNORM:
+    case VK_FORMAT_B8G8R8A8_SNORM:
+    case VK_FORMAT_B8G8R8A8_USCALED:
+    case VK_FORMAT_B8G8R8A8_SSCALED:
+    case VK_FORMAT_B8G8R8A8_UINT:
+    case VK_FORMAT_B8G8R8A8_SINT:
+    case VK_FORMAT_B8G8R8A8_SRGB:
+    case VK_FORMAT_A8B8G8R8_UNORM_PACK32:
+    case VK_FORMAT_A8B8G8R8_SNORM_PACK32:
+    case VK_FORMAT_A8B8G8R8_USCALED_PACK32:
+    case VK_FORMAT_A8B8G8R8_SSCALED_PACK32:
+    case VK_FORMAT_A8B8G8R8_UINT_PACK32:
+    case VK_FORMAT_A8B8G8R8_SINT_PACK32:
+    case VK_FORMAT_A8B8G8R8_SRGB_PACK32:
+    case VK_FORMAT_R16G16_UNORM:
+    case VK_FORMAT_R16G16_SNORM:
+    case VK_FORMAT_R16G16_USCALED:
+    case VK_FORMAT_R16G16_SSCALED:
+    case VK_FORMAT_R16G16_UINT:
+    case VK_FORMAT_R16G16_SINT:
+    case VK_FORMAT_R16G16_SFLOAT:
+    case VK_FORMAT_R32_UINT:
+    case VK_FORMAT_R32_SINT:
+    case VK_FORMAT_R32_SFLOAT:
+    case VK_FORMAT_E5B9G9R9_UFLOAT_PACK32:
+    case VK_FORMAT_A2R10G10B10_UNORM_PACK32:
+    case VK_FORMAT_A2R10G10B10_SNORM_PACK32:
+    case VK_FORMAT_A2R10G10B10_USCALED_PACK32:
+    case VK_FORMAT_A2R10G10B10_SSCALED_PACK32:
+    case VK_FORMAT_A2R10G10B10_UINT_PACK32:
+    case VK_FORMAT_A2R10G10B10_SINT_PACK32:
+    case VK_FORMAT_A2B10G10R10_UNORM_PACK32:
+    case VK_FORMAT_A2B10G10R10_SNORM_PACK32:
+    case VK_FORMAT_A2B10G10R10_USCALED_PACK32:
+    case VK_FORMAT_A2B10G10R10_SSCALED_PACK32:
+    case VK_FORMAT_A2B10G10R10_UINT_PACK32:
+    case VK_FORMAT_A2B10G10R10_SINT_PACK32:
+    case VK_FORMAT_B10G11R11_UFLOAT_PACK32:
+    case VK_FORMAT_X8_D24_UNORM_PACK32: // 24 bit padded depth
+    case VK_FORMAT_D32_SFLOAT: // true float 32 bit depth
+    case VK_FORMAT_D24_UNORM_S8_UINT: // depth 24 bits + stencil 8 bits
+        return 4;
+
+    // 6 bytes per pixel ( 48 bits per pixel )
+    case VK_FORMAT_R16G16B16_UNORM:
+    case VK_FORMAT_R16G16B16_SNORM:
+    case VK_FORMAT_R16G16B16_USCALED:
+    case VK_FORMAT_R16G16B16_SSCALED:
+    case VK_FORMAT_R16G16B16_UINT:
+    case VK_FORMAT_R16G16B16_SINT:
+    case VK_FORMAT_R16G16B16_SFLOAT:
+        return 6;
+        
+    // 8 bytes per pixel ( 64 bits per pixel )
+    case VK_FORMAT_R16G16B16A16_UNORM:
+    case VK_FORMAT_R16G16B16A16_SNORM:
+    case VK_FORMAT_R16G16B16A16_USCALED:
+    case VK_FORMAT_R16G16B16A16_SSCALED:
+    case VK_FORMAT_R16G16B16A16_UINT:
+    case VK_FORMAT_R16G16B16A16_SINT:
+    case VK_FORMAT_R16G16B16A16_SFLOAT:
+    case VK_FORMAT_R32G32_UINT:
+    case VK_FORMAT_R32G32_SINT:
+    case VK_FORMAT_R32G32_SFLOAT:
+    case VK_FORMAT_R64_UINT:
+    case VK_FORMAT_R64_SINT:
+    case VK_FORMAT_R64_SFLOAT:
+        return 8;
+
+    // 12 bytes per pixel ( 96 bits per pixel )
+    case VK_FORMAT_R32G32B32_UINT:
+    case VK_FORMAT_R32G32B32_SINT:
+    case VK_FORMAT_R32G32B32_SFLOAT:
+    case VK_FORMAT_R32G32B32A32_UINT:
+    case VK_FORMAT_R32G32B32A32_SINT:
+    case VK_FORMAT_R32G32B32A32_SFLOAT:
+        return 12;
+    
+    // 16 bytes per pixel ( 128 bits per pixel )
+    case VK_FORMAT_R64G64_UINT:
+    case VK_FORMAT_R64G64_SINT:
+    case VK_FORMAT_R64G64_SFLOAT:
+        return 16;
+    
+    // 24 bytes per pixel ( 192 bits per pixel )
+    case VK_FORMAT_R64G64B64_UINT:
+    case VK_FORMAT_R64G64B64_SINT:
+    case VK_FORMAT_R64G64B64_SFLOAT:
+        return 24;
+        
+    // 32 bytes per pixel ( 256 bits per pixel )
+    case VK_FORMAT_R64G64B64A64_UINT:
+    case VK_FORMAT_R64G64B64A64_SINT:
+    case VK_FORMAT_R64G64B64A64_SFLOAT:
+        return 32;
+
+    // ==================================================================
+    // compressed format 
+    // ==================================================================
+
+    // block compress format: Block = 4x4 px = 16 pixels = 8 bytes
+    case VK_FORMAT_BC1_RGB_UNORM_BLOCK:     // 0.5 bpp / 8 bytes block
+    case VK_FORMAT_BC1_RGB_SRGB_BLOCK:      // 0.5 bpp / 8 bytes block
+    case VK_FORMAT_BC1_RGBA_UNORM_BLOCK:    // 0.5 bpp / 8 bytes block
+    case VK_FORMAT_BC1_RGBA_SRGB_BLOCK:     // 0.5 bpp / 8 bytes block
+    case VK_FORMAT_BC4_UNORM_BLOCK:         // 0.5 bpp / 8 bytes block
+    case VK_FORMAT_BC4_SNORM_BLOCK:         // 0.5 bpp / 8 bytes block
+        return 2;
+
+    // block compress format: Block = 4x4 px = 16 pixels = 16 bytes
+    case VK_FORMAT_BC2_UNORM_BLOCK:         // 1 bpp / 16 bytes block
+    case VK_FORMAT_BC2_SRGB_BLOCK:          // 1 bpp / 16 bytes block
+    case VK_FORMAT_BC3_UNORM_BLOCK:         // 1 bpp / 16 bytes block
+    case VK_FORMAT_BC3_SRGB_BLOCK:          // 1 bpp / 16 bytes block
+    case VK_FORMAT_BC5_UNORM_BLOCK:         // 1 bpp / 16 bytes block
+    case VK_FORMAT_BC5_SNORM_BLOCK:         // 1 bpp / 16 bytes block
+    case VK_FORMAT_BC6H_UFLOAT_BLOCK:       // 1 bpp / 16 bytes block
+    case VK_FORMAT_BC6H_SFLOAT_BLOCK:       // 1 bpp / 16 bytes block
+    case VK_FORMAT_BC7_UNORM_BLOCK:         // 1 bpp / 16 bytes block 
+    case VK_FORMAT_BC7_SRGB_BLOCK:          // 1 bpp / 16 bytes block 
+        return 4;
+
+    // ETC2 / EAC 4x4 pixels = 8 bytes
+    case VK_FORMAT_ETC2_R8G8B8_UNORM_BLOCK:     // 0.5 bpp / 8 bytes block 
+    case VK_FORMAT_ETC2_R8G8B8_SRGB_BLOCK:      // 0.5 bpp / 8 bytes block
+    case VK_FORMAT_ETC2_R8G8B8A1_UNORM_BLOCK:   // 0.5 bpp / 8 bytes block
+    case VK_FORMAT_ETC2_R8G8B8A1_SRGB_BLOCK:    // 0.5 bpp / 8 bytes block
+        return 2;
+
+    case VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK:   // 1 bpp / 16 bytes block
+    case VK_FORMAT_ETC2_R8G8B8A8_SRGB_BLOCK:    // 1 bpp / 16 bytes block
+        return 4;
+
+    // EAC R11
+    case VK_FORMAT_EAC_R11_UNORM_BLOCK:         // 0.5 bpp / 8 bytes block
+    case VK_FORMAT_EAC_R11_SNORM_BLOCK:         // 0.5 bpp / 8 bytes block
+        return 2;
+
+    // EAC RG11
+    case VK_FORMAT_EAC_R11G11_UNORM_BLOCK:      // 1 bpp / 16 bytes block 
+    case VK_FORMAT_EAC_R11G11_SNORM_BLOCK:      // 1 bpp / 16 bytes block 
+        return 4;
+
+    // ASTC
+    case VK_FORMAT_ASTC_4x4_UNORM_BLOCK:    // 4x4 = 16 px → 16 bytes → 8.0 bpp
+    case VK_FORMAT_ASTC_4x4_SRGB_BLOCK:     // 4x4 = 16 px → 16 bytes → 8.0 bpp
+    case VK_FORMAT_ASTC_4x4_SFLOAT_BLOCK:   // 4x4 = 16 px → 16 bytes → 8.0 bpp
+        return 1;
+
+    case VK_FORMAT_ASTC_5x4_UNORM_BLOCK:    // 5x4 = 20 px → 16 bytes 
+    case VK_FORMAT_ASTC_5x4_SRGB_BLOCK:     // 5x4 = 20 px → 16 bytes 
+    case VK_FORMAT_ASTC_5x4_SFLOAT_BLOCK:   // 5x4 = 20 px → 16 bytes
+    case VK_FORMAT_ASTC_5x5_UNORM_BLOCK:    // 5x5 = 25 px → 16 bytes
+    case VK_FORMAT_ASTC_5x5_SRGB_BLOCK:     // 5x5 = 25 px → 16 bytes
+    case VK_FORMAT_ASTC_5x5_SFLOAT_BLOCK:   // 5x5 = 25 px → 16 bytes
+    case VK_FORMAT_ASTC_6x5_UNORM_BLOCK:    // 6x5 = 30 px → 16 bytes
+    case VK_FORMAT_ASTC_6x5_SRGB_BLOCK:     // 6x5 = 30 px → 16 bytes
+    case VK_FORMAT_ASTC_6x5_SFLOAT_BLOCK:   // 6x5 = 30 px → 16 bytes
+    case VK_FORMAT_ASTC_6x6_UNORM_BLOCK:    // 6x6 = 36 px → 16 bytes
+    case VK_FORMAT_ASTC_6x6_SRGB_BLOCK:     // 6x6 = 36 px → 16 bytes
+    case VK_FORMAT_ASTC_6x6_SFLOAT_BLOCK:   // 6x6 = 36 px → 16 bytes
+    case VK_FORMAT_ASTC_8x5_UNORM_BLOCK:    // 8x5 = 40 px → 16 bytes
+    case VK_FORMAT_ASTC_8x5_SRGB_BLOCK:     // 8x5 = 40 px → 16 bytes
+    case VK_FORMAT_ASTC_8x5_SFLOAT_BLOCK:   // 8x5 = 40 px → 16 bytes
+    case VK_FORMAT_ASTC_8x6_UNORM_BLOCK:    // 8x6 = 48 px → 16 bytes
+    case VK_FORMAT_ASTC_8x6_SRGB_BLOCK:     // 8x6 = 48 px → 16 bytes
+    case VK_FORMAT_ASTC_8x6_SFLOAT_BLOCK:   // 8x6 = 48 px → 16 bytes
+    case VK_FORMAT_ASTC_8x8_UNORM_BLOCK:    // 8x8 = 64 px → 16 bytes          
+    case VK_FORMAT_ASTC_8x8_SRGB_BLOCK:     // 8x8 = 64 px → 16 bytes 
+    case VK_FORMAT_ASTC_8x8_SFLOAT_BLOCK:   // 8x8 = 64 px → 16 bytes
+    case VK_FORMAT_ASTC_10x5_UNORM_BLOCK:   // 10x5 = 50 px → 16 bytes
+    case VK_FORMAT_ASTC_10x5_SRGB_BLOCK:    // 10x5 = 50 px → 16 bytes
+    case VK_FORMAT_ASTC_10x5_SFLOAT_BLOCK:  // 10x5 = 50 px → 16 bytes
+    case VK_FORMAT_ASTC_10x6_UNORM_BLOCK:   // 10x6 = 60 px → 16 bytes
+    case VK_FORMAT_ASTC_10x6_SRGB_BLOCK:    // 10x6 = 60 px → 16 bytes
+    case VK_FORMAT_ASTC_10x6_SFLOAT_BLOCK:  // 10x6 = 60 px → 16 bytes
+    case VK_FORMAT_ASTC_10x8_UNORM_BLOCK:   // 10x8 = 80 px → 16 bytes
+    case VK_FORMAT_ASTC_10x8_SRGB_BLOCK:    // 10x8 = 80 px → 16 bytes
+    case VK_FORMAT_ASTC_10x8_SFLOAT_BLOCK:  // 10x8 = 80 px → 16 bytes
+    case VK_FORMAT_ASTC_10x10_UNORM_BLOCK:  // 10x10 = 100 px → 16 bytes
+    case VK_FORMAT_ASTC_10x10_SFLOAT_BLOCK: // 10x10 = 100 px → 16 bytes
+    case VK_FORMAT_ASTC_10x10_SRGB_BLOCK:   // 10x10 = 100 px → 16 bytes
+    case VK_FORMAT_ASTC_12x10_UNORM_BLOCK:  // 12x10 = 120 px → 16 bytes
+    case VK_FORMAT_ASTC_12x10_SRGB_BLOCK:   // 12x10 = 120 px → 16 bytes
+    case VK_FORMAT_ASTC_12x10_SFLOAT_BLOCK: // 12x10 = 120 px → 16 bytes
+    case VK_FORMAT_ASTC_12x12_UNORM_BLOCK:  // 12x12 = 144 px → 16 bytes
+    case VK_FORMAT_ASTC_12x12_SRGB_BLOCK:   // 12x12 = 144 px → 16 bytes
+    case VK_FORMAT_ASTC_12x12_SFLOAT_BLOCK: // 12x12 = 144 px → 16 bytes
+
+    case VK_FORMAT_G8B8G8R8_422_UNORM:
+    case VK_FORMAT_B8G8R8G8_422_UNORM:
+    case VK_FORMAT_G8_B8_R8_3PLANE_420_UNORM:
+    case VK_FORMAT_G8_B8R8_2PLANE_420_UNORM:
+    case VK_FORMAT_G8_B8_R8_3PLANE_422_UNORM:
+    case VK_FORMAT_G8_B8R8_2PLANE_422_UNORM:
+    case VK_FORMAT_G8_B8_R8_3PLANE_444_UNORM:
+    case VK_FORMAT_R10X6_UNORM_PACK16:
+    
+    case VK_FORMAT_R10X6G10X6_UNORM_2PACK16:
+    case VK_FORMAT_R10X6G10X6B10X6A10X6_UNORM_4PACK16:
+    case VK_FORMAT_G10X6B10X6G10X6R10X6_422_UNORM_4PACK16:
+    case VK_FORMAT_B10X6G10X6R10X6G10X6_422_UNORM_4PACK16:
+    
+    case VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16:
+    case VK_FORMAT_G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16:
+    case VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16:
+    case VK_FORMAT_G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16:
+    case VK_FORMAT_G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16:
+    
+    case VK_FORMAT_R12X4_UNORM_PACK16:
+    case VK_FORMAT_R12X4G12X4_UNORM_2PACK16:
+    case VK_FORMAT_R12X4G12X4B12X4A12X4_UNORM_4PACK16:
+    case VK_FORMAT_G12X4B12X4G12X4R12X4_422_UNORM_4PACK16:
+    case VK_FORMAT_B12X4G12X4R12X4G12X4_422_UNORM_4PACK16:
+    case VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16:
+    case VK_FORMAT_G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16:
+    case VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16:
+    case VK_FORMAT_G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16:
+    case VK_FORMAT_G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16:
+    case VK_FORMAT_G16B16G16R16_422_UNORM:
+    case VK_FORMAT_B16G16R16G16_422_UNORM:
+    case VK_FORMAT_G16_B16_R16_3PLANE_420_UNORM:
+    case VK_FORMAT_G16_B16R16_2PLANE_420_UNORM:
+    case VK_FORMAT_G16_B16_R16_3PLANE_422_UNORM:
+    case VK_FORMAT_G16_B16R16_2PLANE_422_UNORM:
+    case VK_FORMAT_G16_B16_R16_3PLANE_444_UNORM:
+    case VK_FORMAT_G8_B8R8_2PLANE_444_UNORM:
+    case VK_FORMAT_G10X6_B10X6R10X6_2PLANE_444_UNORM_3PACK16:
+    case VK_FORMAT_G12X4_B12X4R12X4_2PLANE_444_UNORM_3PACK16:
+    case VK_FORMAT_G16_B16R16_2PLANE_444_UNORM:
+    case VK_FORMAT_A4R4G4B4_UNORM_PACK16:
+    case VK_FORMAT_A4B4G4R4_UNORM_PACK16:
+    
+    case VK_FORMAT_PVRTC1_2BPP_UNORM_BLOCK_IMG:
+    case VK_FORMAT_PVRTC1_4BPP_UNORM_BLOCK_IMG:
+    case VK_FORMAT_PVRTC2_2BPP_UNORM_BLOCK_IMG:
+    case VK_FORMAT_PVRTC2_4BPP_UNORM_BLOCK_IMG:
+    case VK_FORMAT_PVRTC1_2BPP_SRGB_BLOCK_IMG:
+    case VK_FORMAT_PVRTC1_4BPP_SRGB_BLOCK_IMG:
+    case VK_FORMAT_PVRTC2_2BPP_SRGB_BLOCK_IMG:
+    case VK_FORMAT_PVRTC2_4BPP_SRGB_BLOCK_IMG:
+    case VK_FORMAT_R16G16_SFIXED5_NV:
+    // unknow
+    default:
+        break;
+    }
+
+    // are not a valid format 
+    return 0;
 }
