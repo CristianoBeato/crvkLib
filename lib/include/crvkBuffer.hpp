@@ -24,7 +24,7 @@
 
 enum crvkBufferMapAccess_t : uint8_t
 {
-    CRVK_BUFFER_MAP_ACCESS_NONE = 0; // not mapped 
+    CRVK_BUFFER_MAP_ACCESS_NONE = 0, // not mapped 
     CRVK_BUFFER_MAP_ACCESS_WRITE,
     CRVK_BUFFER_MAP_ACCESS_READ
 };
