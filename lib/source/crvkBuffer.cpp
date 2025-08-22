@@ -504,22 +504,14 @@ void crvkBufferStatic::CopyFromBuffer( const VkBuffer in_srcBuffer, const VkBuff
         return;
     }
 
-    // get the operation range
-    for ( uint32_t i = 0; i < in_count; i++)
-    {
-        auto region = in_regions[i];
-        offsetBegin = std::min( region.dstOffset, offsetBegin );
-        offsetEnd = std::max( region.dstOffset + region.size, offsetEnd );
-    }
-    
     // change the buffer state to recive content
-    crvkBuffer::StateTransition( m_commandBuffer, CRVK_BUFFER_STATE_GPU_COPY_DST, queue->Family(), offsetBegin, offsetEnd - offsetBegin );
+    crvkBuffer::StateTransition( m_commandBuffer, CRVK_BUFFER_STATE_GPU_COPY_DST, queue->Family() );
 
     // perform the copy of the buffer conent 
     VkCopyBufferInfo2   copyBufferInfo{};
     copyBufferInfo.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
     copyBufferInfo.srcBuffer = in_srcBuffer;
-    copyBufferInfo.dstBuffer = m_buffer;
+    copyBufferInfo.dstBuffer = m_bufferHandler->buffer;
     copyBufferInfo.regionCount = in_count;
     copyBufferInfo.pRegions = in_regions;
     copyBufferInfo.pNext = nullptr;
@@ -582,53 +574,14 @@ void crvkBufferStatic::CopyToBuffer( const VkBuffer in_dstBuffer, const VkBuffer
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     vkBeginCommandBuffer( m_commandBuffer, &beginInfo );
-
-    // get the operation range
-    for ( uint32_t i = 0; i < in_count; i++)
-    {
-        auto region = in_regions[i];
-        offsetBegin = std::min( region.dstOffset, offsetBegin );
-        offsetEnd = std::max( region.dstOffset + region.size, offsetEnd );
-    }
     
     // change the buffer state to recive content
-    crvkBuffer::StateTransition( m_commandBuffer, CRVK_BUFFER_STATE_GPU_COPY_SRC, queue->Family(), offsetBegin, offsetEnd - offsetBegin );
-
-// BEATO Begin: is more safier we set this on source buffer before begin to copy the content
-//              or we can lead to driver overhead
-#if 0   
-    VkBufferMemoryBarrier2 barrier{};
-    barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
-    // we come from a buffer writig operation 
-    barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
-    barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
-
-    barrier.dstStageMask = VK_PIPELINE_STAGE_2_HOST_BIT;
-    barrier.dstAccessMask = VK_ACCESS_2_HOST_READ_BIT;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.buffer = in_dstBuffer;
-    barrier.offset = 0;
-    barrier.size = VK_WHOLE_SIZE;
-
-    VkDependencyInfo depInfo{};
-    depInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-    depInfo.dependencyFlags = 0;
-    depInfo.memoryBarrierCount = 0;
-    depInfo.pMemoryBarriers = nullptr;
-    depInfo.bufferMemoryBarrierCount = 1;
-    depInfo.pBufferMemoryBarriers = &barrier;
-    depInfo.imageMemoryBarrierCount = 0;
-    depInfo.pImageMemoryBarriers = nullptr;
-    depInfo.pNext = nullptr;
-    vkCmdPipelineBarrier2( m_commandBuffer, &depInfo );
-#endif
-// BEATO End
+    crvkBuffer::StateTransition( m_commandBuffer, CRVK_BUFFER_STATE_GPU_COPY_SRC, queue->Family() );
 
     // copy content from GPU buffer to the CPU buffer 
     VkCopyBufferInfo2 copyBufferInfo{};
     copyBufferInfo.sType = VK_STRUCTURE_TYPE_COPY_BUFFER_INFO_2;
-    copyBufferInfo.srcBuffer = m_buffer;
+    copyBufferInfo.srcBuffer = m_bufferHandler->buffer;
     copyBufferInfo.dstBuffer = in_dstBuffer;
     copyBufferInfo.regionCount = in_count;
     copyBufferInfo.pRegions = in_regions;
@@ -661,9 +614,9 @@ void crvkBufferStatic::CopyToBuffer( const VkBuffer in_dstBuffer, const VkBuffer
 crvkBufferStatic::StateTransition
 ==============================================
 */
-void crvkBufferStatic::StateTransition(const crvkBufferState_t in_state, const uint32_t in_dstQueue, const VkDeviceSize in_offset, const VkDeviceSize in_size)
+void crvkBufferStatic::StateTransition(const crvkBufferState_t in_state, const uint32_t in_dstQueue )
 {
-    crvkBuffer::StateTransition( m_commandBuffer, in_state, in_dstQueue, in_offset, in_size );
+    crvkBuffer::StateTransition( m_commandBuffer, in_state, in_dstQueue );
 }
 
 /*
@@ -708,9 +661,9 @@ void *crvkBufferStatic::Map( const uintptr_t in_offset, const size_t in_size, co
         state = CRVK_BUFFER_STATE_CPU_COPY_DST;
 
     // change the buffer state to recive content
-    crvkBuffer::StateTransition( m_commandBuffer, state, queue->Family(), in_offset, in_size );
+    crvkBuffer::StateTransition( m_commandBuffer, state, queue->Family() );
 
-    vkMapMemory( m_device->Device(), m_memory, in_offset, in_size, 0, &pointer );
+    vkMapMemory( m_device->Device(), m_bufferHandler->memory, in_offset, in_size, 0, &pointer );
     
     return pointer;    
 }
@@ -730,8 +683,8 @@ void crvkBufferStatic::Unmap( const crvkBufferState_t in_state )
         queue = m_device->GetQueue( CRVK_DEVICE_QUEUE_GRAPHICS );
 
     // release memory acess
-    vkUnmapMemory( m_device->Device(), m_memory );
-    crvkBuffer::StateTransition( m_commandBuffer, in_state, queue->Family(), 0, VK_WHOLE_SIZE );
+    vkUnmapMemory( m_device->Device(), m_bufferHandler->memory );
+    crvkBuffer::StateTransition( m_commandBuffer, in_state, queue->Family() );
 
     //
     vkEndCommandBuffer( m_commandBuffer );
@@ -834,10 +787,9 @@ bool crvkBufferStaging::Create( const crvkDevice* in_device, const size_t in_siz
         return false;
 
     // get queues 
-    graphics = m_device->GetQueue( CRVK_DEVICE_QUEUE_GRAPHICS );
-    tranfer = m_device->GetQueue( CRVK_DEVICE_QUEUE_TRANSFER );
-    device = m_device->Device();
-
+    graphics = in_device->GetQueue( CRVK_DEVICE_QUEUE_GRAPHICS );
+    tranfer = in_device->GetQueue( CRVK_DEVICE_QUEUE_TRANSFER );
+    
     //
     // Create the CPU side buffer 
     // ==========================================================================
@@ -957,10 +909,10 @@ void crvkBufferStaging::GetSubData( void* in_data, const uintptr_t in_offset, co
 
     VkBufferCopy2 copy{};
     copy.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
+    copy.pNext = nullptr;
     copy.srcOffset = in_offset;
     copy.dstOffset = in_offset;
     copy.size =  in_size;
-    copy.pNext = nullptr;
     
     // copy from GPU buffer to CPU
     const_cast<crvkBufferStaging*>( this )->CopyToBuffer( m_stagingBuffer, &copy, 1 );
@@ -980,9 +932,9 @@ void crvkBufferStaging::GetSubData( void* in_data, const uintptr_t in_offset, co
 crvkBufferStaging::Map
 ==============================================
 */
-void* crvkBufferStaging::Map( const uintptr_t in_offset, const size_t in_size, const uint32_t in_flags ) const
+void *crvkBufferStaging::Map(const uintptr_t in_offset, const size_t in_size, const crvkBufferMapAccess_t in_acces)
 {
-    const_cast<crvkBufferStaging*>( this )->m_mapFlags = in_flags;
+    m_mapacess = in_acces;
     VkResult res = VK_SUCCESS;
     VkDeviceSize bufferSize = VK_WHOLE_SIZE;
     void* map = nullptr;
@@ -990,11 +942,26 @@ void* crvkBufferStaging::Map( const uintptr_t in_offset, const size_t in_size, c
     if ( in_size != 0 )
         bufferSize = in_size;
 
+    if( in_acces == CRVK_BUFFER_MAP_ACCESS_READ )
+    {
+        // TODO: inser a barrier, to sync staging buffer as copy destine 
+
+        // we copy the content of the GPU buffer to our CPU buffer, before map to acess
+        VkBufferCopy2 region{};
+        region.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
+        region.pNext = nullptr;
+        region.srcOffset = in_offset;
+        region.dstOffset = in_offset;
+        region.size = in_size;
+
+        // load content from GPU buffer
+        CopyToBuffer( m_stagingBuffer, &region, 1 ); 
+    }
+
     res = vkMapMemory( m_device->Device(), m_stagingMemory, in_offset, bufferSize, 0, &map );
     if ( res != VK_SUCCESS )
-    {
         throw std::runtime_error( "Map Error" );
-    }
+
     return map;
 }
 
@@ -1003,12 +970,27 @@ void* crvkBufferStaging::Map( const uintptr_t in_offset, const size_t in_size, c
 crvkBufferStaging::Unmap
 ==============================================
 */
-void crvkBufferStaging::Unmap( void ) const
+void crvkBufferStaging::Unmap( void ) 
 {
     // release buffer memory map 
     vkUnmapMemory( m_device->Device(), m_stagingMemory );
 
-    const_cast<crvkBufferStaging*>( this )->m_mapFlags = 0;
+    // flush buffer content 
+    if ( m_mapacess == CRVK_BUFFER_STATE_COMPUTE_WRITE )
+    {
+        // flush the buffer content, before we use it
+        VkBufferCopy2 region{};
+        region.sType = VK_STRUCTURE_TYPE_BUFFER_COPY_2;
+        region.pNext = nullptr;
+        region.srcOffset = 0;
+        region.dstOffset = 0;
+        region.size = VK_WHOLE_SIZE; // worst case, scenario, we flush the whole buffer 
+
+        // load content from GPU buffer
+        CopyFromBuffer( m_stagingBuffer, &region, 1 ); 
+    }
+    
+    m_mapacess = CRVK_BUFFER_MAP_ACCESS_NONE;
 }
 
 /*
@@ -1018,7 +1000,8 @@ crvkBufferStaging::Flush
 */
 void crvkBufferStaging::Flush( const uintptr_t in_offset, const size_t in_size ) const
 {
-    if ( m_mapFlags == 0 )
+    /// buffer are not mapped
+    if ( m_mapacess == CRVK_BUFFER_MAP_ACCESS_NONE )
         return;    
 
     VkBufferCopy2 copyRegion{};
@@ -1029,9 +1012,8 @@ void crvkBufferStaging::Flush( const uintptr_t in_offset, const size_t in_size )
     copyRegion.size = in_size;
 
     // perform a copy from buffer 
-    if ( m_mapFlags & CRVK_BUFFER_MAP_ACCESS_WRITE ) // copy content from 
+    if ( m_mapacess == CRVK_BUFFER_MAP_ACCESS_WRITE ) // copy content from 
         const_cast<crvkBufferStaging*>( this )->CopyToBuffer( m_stagingBuffer, &copyRegion, 1 );
-    else if ( m_mapFlags & CRVK_BUFFER_MAP_ACCESS_READ )
+    else if ( m_mapacess == CRVK_BUFFER_MAP_ACCESS_READ )
         const_cast<crvkBufferStaging*>( this )->CopyFromBuffer( m_stagingBuffer, &copyRegion, 1 );
-
 }

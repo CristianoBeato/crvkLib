@@ -24,6 +24,7 @@
 
 enum crvkBufferMapAccess_t : uint8_t
 {
+    CRVK_BUFFER_MAP_ACCESS_NONE = 0; // not mapped 
     CRVK_BUFFER_MAP_ACCESS_WRITE,
     CRVK_BUFFER_MAP_ACCESS_READ
 };
@@ -141,7 +142,7 @@ protected:
     VkSemaphore         m_copySemaphore;
     VkSemaphore         m_useSemaphore;    
     VkCommandBuffer     m_commandBuffer;
-
+    crvkDevice*         m_device;
 
     /// @brief 
     /// @param  
@@ -172,14 +173,14 @@ public:
     virtual void    Destroy( void ) override;
     virtual void    SubData( const void* in_data, const uintptr_t in_offset, const size_t in_size ) const override;
     virtual void    GetSubData( void* in_data, const uintptr_t in_offset, const size_t in_size ) const override;
-    virtual void*   Map( const uintptr_t in_offset, const size_t in_size, const uint32_t in_flags ) override;
+    virtual void*   Map( const uintptr_t in_offset, const size_t in_size, const crvkBufferMapAccess_t in_acces ) override;
     virtual void    Unmap( void ) override;
     virtual void    Flush( const uintptr_t in_offset, const size_t in_size ) const override;
     
 private:
-    uint32_t            m_mapFlags;
-    VkBuffer            m_stagingBuffer;
-    VkDeviceMemory      m_stagingMemory;
+    crvkBufferMapAccess_t   m_mapacess;
+    VkBuffer                m_stagingBuffer;
+    VkDeviceMemory          m_stagingMemory;
 };
 
 #endif //!__CRVK_BUFFER_HPP__
