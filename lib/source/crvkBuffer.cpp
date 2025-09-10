@@ -476,8 +476,6 @@ crvkBufferStatic::CopyFromBuffer
 void crvkBufferStatic::CopyFromBuffer( const VkBuffer in_srcBuffer, const VkBufferCopy2* in_regions, const uint32_t in_count ) 
 {
     VkResult result = VK_SUCCESS;
-    VkDeviceSize offsetBegin = 0;
-    VkDeviceSize offsetEnd = 0;
     crvkDeviceQueue * queue = nullptr;
 
     if ( m_device->HasTransferQueue() )
@@ -556,8 +554,6 @@ crvkBufferStatic::CopyToBuffer
 void crvkBufferStatic::CopyToBuffer( const VkBuffer in_dstBuffer, const VkBufferCopy2 *in_regions, const uint32_t in_count )
 {
     VkResult result = VK_SUCCESS;
-    VkDeviceSize offsetBegin = 0;
-    VkDeviceSize offsetEnd = 0;
     crvkDeviceQueue* queue = nullptr;
     VkDevice device = m_device->Device();
 
@@ -641,7 +637,7 @@ void *crvkBufferStatic::Map( const uintptr_t in_offset, const size_t in_size, co
     if( result != VK_SUCCESS )
     {
         crvkAppendError( "crvkBufferStatic::Map::vkResetCommandBuffer", result );
-        return; // todo: trow a error
+        return nullptr; // todo: trow a error
     }
 
     // begin a copy download comand 
@@ -652,7 +648,7 @@ void *crvkBufferStatic::Map( const uintptr_t in_offset, const size_t in_size, co
     if( result != VK_SUCCESS )
     {
         crvkAppendError( "crvkBufferStatic::Map::vkBeginCommandBuffer", result );
-        return; // todo: trow a error
+        return nullptr; // todo: trow a error
     }
 
     if ( in_acces == CRVK_BUFFER_MAP_ACCESS_READ )

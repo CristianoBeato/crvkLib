@@ -22,6 +22,8 @@
 #ifndef __CRVK_FENCE_HPP__
 #define __CRVK_FENCE_HPP__
 
+typedef struct crvkFenceHandler_t;
+
 class crvkFence
 {
 public:
@@ -31,7 +33,7 @@ public:
     /// @brief Create the fence object 
     /// @param in_device Host device.
     /// @param in_flags Creation flags 
-    void        Create( const crvkDevice* in_device, const VkFenceCreateFlags in_flags );
+    void        Create( const VkDevice in_logicDevice, const VkFenceCreateFlags in_flags );
 
     /// @brief destroy the fence object  
     void        Destroy( void );
@@ -58,8 +60,7 @@ public:
     VkResult    GetStatus( void ) const;
 
 private:
-    crvkDevice*     m_device;
-    VkFence         m_fence;
+    crvkFenceHandler_t* m_handle;
 };
 
 #endif //!__CRVK_FENCE_HPP__

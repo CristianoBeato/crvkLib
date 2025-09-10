@@ -187,7 +187,7 @@ bool crvkImage::Create(
     viewCI.image = m_imageHandle->image;
     viewCI.viewType = m_imageHandle->type;
     viewCI.format = m_imageHandle->format;
-
+    viewCI.subresourceRange = subresourceRange;
     result = vkCreateImageView( m_imageHandle->device, &viewCI, k_allocationCallbacks, &m_imageHandle->view );
     if( result != VK_SUCCESS )
     {

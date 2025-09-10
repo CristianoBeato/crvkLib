@@ -22,15 +22,21 @@
 #include "crvkPrecompiled.hpp"
 #include "crvkFence.hpp"
 
+typedef struct crvkFenceHandler_t
+{
+    VkFence     fence = nullptr;        // fence handle 
+    VkDevice    device = nullptr;       // logic device handle
+} crvkFenceHandler_t;
+
 /*
 ==============================================
 crvkFence::crvkFence
 ==============================================
 */
-crvkFence::crvkFence( void ) : m_device( nullptr ), m_fence( nullptr )
+crvkFence::crvkFence( void ) : m_handle( nullptr )
 {
+    m_handle = new crvkFenceHandler_t(); 
 }
-
 
 /*
 ==============================================
@@ -40,6 +46,11 @@ crvkFence::~crvkFence
 crvkFence::~crvkFence( void )
 {
     Destroy();
+    if ( m_handle != nullptr )
+    {
+        delete m_handle;
+        m_handle = nullptr;
+    }
 }
 
 /*
@@ -47,12 +58,13 @@ crvkFence::~crvkFence( void )
 crvkFence::Create
 ==============================================
 */
-void crvkFence::Create( const crvkDevice *in_device, const VkFenceCreateFlags in_flags )
+void crvkFence::Create( const VkDevice in_logicDevice, const VkFenceCreateFlags in_flags )
 {
     VkFenceCreateInfo fenceCI{};
     fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
     fenceCI.flags = in_flags;
-    vkCreateFence( m_device->Device(), &fenceCI, k_allocationCallbacks, &m_fence ); 
+    m_handle->device = in_logicDevice; 
+    vkCreateFence( m_handle->device, &fenceCI, k_allocationCallbacks, &m_handle->fence ); 
 }
 
 /*
@@ -62,13 +74,16 @@ crvkFence::Destroy
 */
 void crvkFence::Destroy( void )
 {
-    if ( m_fence != nullptr )
+    if ( m_handle == nullptr )
+        return;
+    
+    if ( m_handle->fence != nullptr )
     {
-        vkDestroyFence( m_device->Device(), m_fence, k_allocationCallbacks );
-        m_fence = nullptr;
+        vkDestroyFence( m_handle->device, m_handle->fence, k_allocationCallbacks );
+        m_handle->fence = nullptr;
     }
     
-    m_device = nullptr;
+    m_handle->device = nullptr;
 }
 
 /*
@@ -78,7 +93,7 @@ crvkFence::Reset
 */
 VkResult crvkFence::Reset( void ) const
 {
-    return vkResetFences( m_device->Device(), 1, &m_fence );
+    return vkResetFences( m_handle->device, 1, &m_handle->fence );
 }
 
 
@@ -89,7 +104,7 @@ crvkFence::Wait
 */
 VkResult crvkFence::Wait( const uint64_t in_timeout ) const
 {
-    return vkWaitForFences( m_device->Device(), 1, &m_fence, VK_FALSE, in_timeout );
+    return vkWaitForFences( m_handle->device, 1, &m_handle->fence, VK_FALSE, in_timeout );
 }
 
 /*
@@ -99,5 +114,5 @@ crvkFence::GetStatus
 */
 VkResult crvkFence::GetStatus( void ) const
 {
-    return vkGetFenceStatus( m_device->Device(), m_fence );
+    return vkGetFenceStatus( m_handle->device, m_handle->fence );
 }
