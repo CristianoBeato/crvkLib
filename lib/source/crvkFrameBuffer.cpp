@@ -22,20 +22,32 @@
 #include "crvkPrecompiled.hpp"
 #include "crvkFrameBuffer.hpp"
 
-crvkFrameBufferStatic::crvkFrameBufferStatic( void ) : m_renderPass( nullptr ), m_frameBuffer( nullptr ) 
+typedef struct crvkFrameBufferHandle_t 
 {
+    uint32_t            numFrambebuffers = 0;
+    VkExtent2D          extent;
+    VkRenderPass        renderpass = nullptr;
+    VkFramebuffer*      framebufferArray = nullptr;
+    VkDevice            device = nullptr;
+} crvkFrameBufferHandle_t;
+
+crvkFrameBuffer::crvkFrameBuffer( void ) : m_handle( nullptr ) 
+{
+    m_handle = new crvkFrameBufferHandle_t();
 }
 
-crvkFrameBufferStatic::~crvkFrameBufferStatic( void )
+crvkFrameBuffer::~crvkFrameBuffer( void )
 {
+    Destroy();
+    delete m_handle;
+    m_handle = nullptr;
 }
 
-bool crvkFrameBufferStatic::Create( 
+bool crvkFrameBuffer::Create( 
     const crvkDevice* in_device, 
     const uint32_t in_bufferCount,
+    const Attachament_t* in_attachaments,
     const VkFramebufferCreateFlags in_flags,
-    const uint32_t in_attachmentCount,
-    const VkImageView* in_attachments,
     const uint32_t in_width,
     const uint32_t in_height,
     const uint32_t in_layers,
@@ -48,20 +60,21 @@ bool crvkFrameBufferStatic::Create(
     const bool in_recreate )
 {
     VkResult result = VK_SUCCESS;
+
+    m_handle->device = in_device->Device();
+
     ///
     /// Create render pass configuration 
     /// ==========================================================================
-
     VkRenderPassCreateInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = in_attachmentCount;
+    renderPassInfo.attachmentCount = in_attachmentDescriptionsCount;
     renderPassInfo.pAttachments = in_attachmentsDescriptions;
     renderPassInfo.subpassCount = in_subpassCount;
     renderPassInfo.pSubpasses = in_subpasses;
     renderPassInfo.dependencyCount = in_dependencyCount;
     renderPassInfo.pDependencies = in_dependencies;
-
-    result = vkCreateRenderPass( m_device->Device(), &renderPassInfo, nullptr, &m_renderPass ); 
+    result = vkCreateRenderPass( m_handle->device, &renderPassInfo, nullptr, &m_handle->renderpass ); 
     if ( result != VK_SUCCESS )
     {
         crvkAppendError( "crvkSwapchain::Create::vkCreateFramebuffer", result );
@@ -70,47 +83,88 @@ bool crvkFrameBufferStatic::Create(
 
     VkFramebufferCreateInfo framebufferCI{};
     framebufferCI.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    framebufferCI.renderPass = m_renderPass;
-    framebufferCI.attachmentCount = 1;
-    framebufferCI.pAttachments = in_attachments;
+    framebufferCI.renderPass = m_handle->renderpass;
     framebufferCI.width = in_width;
     framebufferCI.height = in_height;
     framebufferCI.layers = in_layers;
 
-    if ( in_recreate )
-        vkDestroyFramebuffer( m_device->Device(), m_frameBuffer, k_allocationCallbacks );
-
-    result = vkCreateFramebuffer( m_device->Device(), &framebufferCI, nullptr, &m_frameBuffer );
-    if ( result != VK_SUCCESS ) 
+    if ( !in_recreate )
+        m_handle->framebufferArray = static_cast<VkFramebuffer*>( SDL_malloc( sizeof( VkFramebuffer ) * m_handle->numFrambebuffers ) );
+    
+    for ( uint32_t i = 0; i < m_handle->numFrambebuffers; i++)
     {
-        crvkAppendError( "crvkSwapchain::Create::vkCreateFramebuffer", result );
-        return false;
-    }
+        framebufferCI.attachmentCount = in_attachaments[i].count;
+        framebufferCI.pAttachments = in_attachaments[i].attachaments;
 
+        if ( in_recreate &&  m_handle->framebufferArray[i] != nullptr )
+            vkDestroyFramebuffer( m_handle->device, m_handle->framebufferArray[i], k_allocationCallbacks );
+        
+        result = vkCreateFramebuffer( m_handle->device, &framebufferCI, nullptr, &m_handle->framebufferArray[i] );
+        if ( result != VK_SUCCESS ) 
+        {
+            crvkAppendError( "crvkSwapchain::Create::vkCreateFramebuffer", result );
+            return false;
+        }
+    }
     return true;
 }
 
-void crvkFrameBufferStatic::Destroy( void )
+void crvkFrameBuffer::Destroy( void )
 {
-    if ( m_frameBuffer != nullptr )
-    {
-        vkDestroyFramebuffer( m_device->Device(), m_frameBuffer, k_allocationCallbacks );
-        m_frameBuffer = nullptr;
-    }
+    if ( m_handle == nullptr )
+        return;
 
-    if( m_renderPass != nullptr )
+    for ( uint32_t i = 0; i < m_handle->numFrambebuffers; i++)
     {
-        vkDestroyRenderPass( m_device->Device(), m_renderPass, k_allocationCallbacks );
-        m_renderPass = nullptr;
+        if ( m_handle->framebufferArray[i] == nullptr )
+            continue;
+
+        vkDestroyFramebuffer( m_handle->device, m_handle->framebufferArray[i], k_allocationCallbacks );
+        m_handle->framebufferArray[i] = nullptr;
     }
     
-    m_device = nullptr;
+    if ( m_handle->framebufferArray != nullptr )
+    {
+        SDL_free( m_handle->framebufferArray );
+        m_handle->framebufferArray;
+    }
+
+    if( m_handle->renderpass != nullptr )
+    {
+        vkDestroyRenderPass( m_handle->device, m_handle->renderpass, k_allocationCallbacks );
+        m_handle->renderpass = nullptr;
+    }
 }
 
-crvkFrameBufferRoundRobin::crvkFrameBufferRoundRobin( void )
+uint32_t crvkFrameBuffer::FrameBufferCount(void) const
 {
+    if ( m_handle == nullptr )
+        return 0;
+    
+    return m_handle->numFrambebuffers;
 }
 
-crvkFrameBufferRoundRobin::~crvkFrameBufferRoundRobin( void )
+VkRenderPass crvkFrameBuffer::RenderPass( void ) const
 {
+    if( m_handle == nullptr )
+        return nullptr;
+
+    return m_handle->renderpass;
+}
+
+VkFramebuffer* crvkFrameBuffer::Framebuffers( void ) const
+{
+    if( m_handle == nullptr )
+        return nullptr;
+
+    return m_handle->framebufferArray;
+}
+
+VkFramebuffer crvkFrameBuffer::GetFrameBuffer(const uint32_t in_index ) const
+{
+    uint32_t index = 0;
+    if ( m_handle == nullptr )
+        return nullptr;
+    index = std::min( m_handle->numFrambebuffers - 1, in_index );
+    return m_handle->framebufferArray[index];
 }

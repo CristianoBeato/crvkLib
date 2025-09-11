@@ -22,15 +22,22 @@
 #ifndef __CRVK_FRAME_BUFFER_HPP__
 #define __CRVK_FRAME_BUFFER_HPP__
 
+typedef struct crvkFrameBufferHandle_t crvkFrameBufferHandle_t;
+
 class crvkFrameBuffer
 {
 public:
+    struct Attachament_t
+    {
+        uint32_t        count = 0;              // attachaments count 
+        VkImageView*    attachaments = nullptr; // framebuffer attachaments
+    };
+
     virtual bool    Create( 
             const crvkDevice* in_device, 
             const uint32_t in_bufferCount,
+            const Attachament_t* attachaments,
             const VkFramebufferCreateFlags in_flags,
-            const uint32_t in_attachmentCount,
-            const VkImageView* in_attachments,
             const uint32_t in_width,
             const uint32_t in_height,
             const uint32_t in_layers,
@@ -42,74 +49,24 @@ public:
             const VkSubpassDependency* in_dependencies,
             const bool in_recreate );
     virtual void    Destroy( void );
-    virtual VkRenderPass    RenderPass( void ) const = 0;
-    virtual VkFramebuffer   Framebuffer( void ) const = 0;
+    
+    /// @brief The number of frame buffers objects
+    /// @return the count of frame buffers 
+    uint32_t        FrameBufferCount( void ) const;
 
-};
+    /// @brief Return the frame buffer renderpass configuration
+    /// @return the handle for vulkan renderpass  
+    VkRenderPass    RenderPass( void ) const;
+    
+    /// @brief Return the array of frame buffers objects 
+    VkFramebuffer*  Framebuffers( void ) const;
 
-class crvkFrameBufferStatic : public crvkFrameBuffer
-{
-public:
-    crvkFrameBufferStatic( void );
-    ~crvkFrameBufferStatic( void );
-
-    virtual bool    Create( 
-        const crvkDevice* in_device, 
-        const uint32_t in_bufferCount,
-        const VkFramebufferCreateFlags in_flags,
-        const uint32_t in_attachmentCount,
-        const VkImageView* in_attachments,
-        const uint32_t in_width,
-        const uint32_t in_height,
-        const uint32_t in_layers,
-        const uint32_t in_attachmentDescriptionsCount,
-        const VkAttachmentDescription* in_attachmentsDescriptions,
-        const uint32_t in_subpassCount,
-        const VkSubpassDescription* in_subpasses,
-        const uint32_t in_dependencyCount,
-        const VkSubpassDependency* in_dependencies,
-        const bool in_recreate ) override;
-    void    Destroy( void ) override;
-    VkRenderPass    RenderPass( void ) const override { return m_renderPass; }
-    VkFramebuffer   Framebuffer( void ) const override { return m_frameBuffer; }
+    /// @brief Return a specific framebufer from array
+    /// @param in_index the index of the framebuffer in the array
+    VkFramebuffer   GetFrameBuffer( const uint32_t in_index ) const;
 
 protected:
-    crvkDevice*     m_device;
-    VkRenderPass    m_renderPass;
-    VkFramebuffer   m_frameBuffer;
-};
-
-class crvkFrameBufferRoundRobin : public crvkFrameBuffer
-{
-public:
-    crvkFrameBufferRoundRobin( void );
-    ~crvkFrameBufferRoundRobin( void );
-    virtual bool    Create( 
-        const crvkDevice* in_device, 
-        const uint32_t in_bufferCount,
-        const VkFramebufferCreateFlags in_flags,
-        const uint32_t in_attachmentCount,
-        const VkImageView* in_attachments,
-        const uint32_t in_width,
-        const uint32_t in_height,
-        const uint32_t in_layers,
-        const uint32_t in_attachmentDescriptionsCount,
-        const VkAttachmentDescription* in_attachmentsDescriptions,
-        const uint32_t in_subpassCount,
-        const VkSubpassDescription* in_subpasses,
-        const uint32_t in_dependencyCount,
-        const VkSubpassDependency* in_dependencies,
-        const bool in_recreate );
-    virtual void    Destroy( void ) override;
-    virtual VkRenderPass    RenderPass( void ) const override { return m_renderPass; }
-    virtual VkFramebuffer   Framebuffer( void ) const override { return m_frameBuffers[m_frameCount]; }
-
-private:
-    uint32_t                            m_frame;
-    uint32_t                            m_frameCount;
-    crvkDevice*                         m_device;
-    VkRenderPass                        m_renderPass;
-    crvkDynamicVector<VkFramebuffer>    m_frameBuffers;
+        crvkFrameBufferHandle_t*    m_handle;
 };
 
 #endif //__CRVK_FRAME_BUFFER_HPP__
