@@ -36,7 +36,7 @@ public:
     virtual bool    Create( 
             const crvkDevice* in_device, 
             const uint32_t in_bufferCount,
-            const Attachament_t* attachaments,
+            const Attachament_t* in_attachaments,
             const VkFramebufferCreateFlags in_flags,
             const uint32_t in_width,
             const uint32_t in_height,
