@@ -58,7 +58,7 @@ crvkCommandBuffer::~crvkCommandBuffer( void )
 crvkCommandBuffer::Create
 ==============================================
 */
-bool crvkCommandBuffer::Create( const crvkDevice* in_device, const uint32_t in_count, const VkCommandBufferLevel in_level, const bool in_createFences )
+bool crvkCommandBuffer::Create( const crvkDevice* in_device, const crvkDeviceQueue* in_queue, const uint32_t in_count, const VkCommandBufferLevel in_level, const bool in_createFences )
 {
     VkResult result = VK_SUCCESS;
 
@@ -69,6 +69,8 @@ bool crvkCommandBuffer::Create( const crvkDevice* in_device, const uint32_t in_c
     // alloc handler structure
     m_handler = static_cast<crvkCommandBufferHandler_t*>( SDL_malloc( sizeof( crvkCommandBufferHandler_t ) ) );
     m_handler->device = in_device->Device();
+    m_handler->commandPool = in_queue->CommandPool();
+    m_handler->queues = in_queue->Queue();
     m_handler->count = in_count;
     m_handler->current = 0;
 
@@ -82,13 +84,13 @@ bool crvkCommandBuffer::Create( const crvkDevice* in_device, const uint32_t in_c
     result = vkAllocateCommandBuffers( m_handler->device, &commandBufferAllocateCI, m_handler->commandBuffers );
     if( result != VK_SUCCESS )
     {
-        // TODO: erro outpue
+        crvkAppendError( "crvkCommandBuffer::Create::vkAllocateCommandBuffers", result );
         return false;
     }
 
     if ( in_createFences )
     {
-        
+        // TODO:
     }
     
 

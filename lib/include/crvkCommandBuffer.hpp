@@ -31,7 +31,7 @@ public:
     crvkCommandBuffer( void );
     ~crvkCommandBuffer( void );
 
-    bool                Create( const crvkDevice* in_device, const uint32_t in_count, const VkCommandBufferLevel in_leve, const bool in_useFences = false );
+    bool                Create( const crvkDevice* in_device, const crvkDeviceQueue* in_queue, const uint32_t in_count, const VkCommandBufferLevel in_leve, const bool in_useFences = false );
     void                Destroy( void );
     // current active buffer
     void                SelectCurrentBuffer( const uint32_t in_index );

@@ -41,6 +41,7 @@
 #include "crvkCore.hpp"
 #include "crvkException.hpp"
 #include "crvkContext.hpp"
+#include "crvkQueue.hpp"
 #include "crvkDevice.hpp"
 #include "crvkFence.hpp"
 #include "crvkSemaphore.hpp"
