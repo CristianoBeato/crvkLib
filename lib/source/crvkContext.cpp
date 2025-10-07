@@ -171,15 +171,6 @@ bool crvkContext::Create(
     m_physicalDeviceList.Memset( 0x00000000 );
     vkEnumeratePhysicalDevices( m_instance, &deviceCount, &m_physicalDeviceList );
 
-    m_devicePropertiesList.Resize( deviceCount );
-    m_devicePropertiesList.Memset( 0x00000000 );
-    for ( uint32_t i = 0; i < deviceCount; i++)
-    {
-        // aquire device properties
-        m_devicePropertiesList[i] = new crvkDevice();
-        m_devicePropertiesList[i]->InitDevice( this, m_physicalDeviceList[i] );
-    }
-    
     // initialize shader compiler
     glslang_initialize_process();
 
@@ -195,14 +186,8 @@ void crvkContext::Destroy(void)
 {
     // release shader compiler
     glslang_finalize_process();
-
-    for ( uint32_t i = 0; i < m_devicePropertiesList.Count(); i++)
-    {
-        delete m_devicePropertiesList[i];
-    }
     
     m_physicalDeviceList.Clear();
-    m_devicePropertiesList.Clear();
 
     if( m_surface != nullptr )
     {
@@ -223,17 +208,22 @@ void crvkContext::Destroy(void)
     }
 }
 
-/*
-==============================================
-crvkContext::GetDeviceList
-==============================================
-*/
-crvkDevice* const * crvkContext::GetDeviceList( uint32_t* in_count ) const
+bool crvkContext::GetDevices( uint32_t *in_count, crvkDevice **in_devices ) const
 {
-    if ( in_count != nullptr )
-        *in_count = m_devicePropertiesList.Count();
+    bool error = false;
+    if ( in_count != nullptr && in_devices == nullptr )
+    {
+        *in_count = m_physicalDeviceList.Count();
+        return m_physicalDeviceList.Count() > 0;
+    }
     
-    return &m_devicePropertiesList;
+    for ( uint32_t i = 0; i < m_physicalDeviceList.Count(); i++ )
+    {
+        crvkDevice * device = in_devices[i];
+        error = device->InitDevice( this, m_physicalDeviceList[i] );
+    }
+
+    return error;
 }
 
 /*

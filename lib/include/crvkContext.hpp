@@ -41,7 +41,7 @@ public:
     
     void    Destroy( void );
 
-    crvkDevice* const *         GetDeviceList( uint32_t* in_count ) const;
+    bool                        GetDevices( uint32_t *in_count, crvkDevice** in_devices ) const;
     VkInstance                  Instance( void ) const { return m_instance; }
     VkSurfaceKHR                Surface( void ) const { return m_surface; }
 
@@ -51,7 +51,6 @@ private:
     VkDebugUtilsMessengerEXT            m_debugMessenger;
     VkSurfaceKHR                        m_surface;
     crvkDynamicVector<VkPhysicalDevice> m_physicalDeviceList;
-    crvkDynamicVector<crvkDevice*>      m_devicePropertiesList;
 
     bool CheckValidationLayerSupport( const char** in_layers, const uint32_t in_layersCount );
 
