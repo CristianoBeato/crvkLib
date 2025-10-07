@@ -57,6 +57,8 @@ crvkSwapchain::~crvkSwapchain( void )
 bool crvkSwapchain::Create( 
                     const crvkContext* in_context,
                     const crvkDevice* in_device, 
+                    const crvkDeviceQueue* in_graphic,
+                    const crvkDeviceQueue* in_present,
                     const uint32_t in_frames, 
                     const VkExtent2D in_extent, 
                     const VkSurfaceFormatKHR in_surfaceformat, 
@@ -71,7 +73,23 @@ bool crvkSwapchain::Create(
     
     m_handle->numFrames = in_frames;
     m_handle->extent = in_extent;
-    m_handle->device = in_device->Device();   
+    m_handle->device = in_device->Device();
+
+    if ( in_present == nullptr )
+    {
+        crvkAppendError( "crvkSwapchain::Create::NO PRESENT QUEUE FOUND", VK_INCOMPLETE );
+        return false;
+    }
+    
+    if ( in_graphic == nullptr )
+    {
+        crvkAppendError( "crvkSwapchain::Create::NO GRAPHIC QUEUE FOUND", VK_INCOMPLETE );
+        return false;
+    }
+
+    queueFamilyIndices[0] = in_present->Family();
+    queueFamilyIndices[1] = in_graphic->Family();
+    m_handle->presentQueue = in_present->Queue();
 
     if ( in_recreate )
     {
@@ -80,6 +98,7 @@ bool crvkSwapchain::Create(
         // wait we for finish evetirthing before we recreate the swap chain
         vkDeviceWaitIdle( m_handle->device );
     }
+    
     ///
     /// Create Swapchain and Imageview 
     /// ==========================================================================
@@ -93,23 +112,6 @@ bool crvkSwapchain::Create(
     swapchainCI.imageExtent = m_handle->extent;
     swapchainCI.imageArrayLayers = 1;
     swapchainCI.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
-    auto present = in_device->GetQueue( CRVK_DEVICE_QUEUE_PRESENT ); // get the present queue
-    if ( present == nullptr )
-    {
-        crvkAppendError( "crvkSwapchain::Create::NO PRESENT QUEUE FOUND", VK_INCOMPLETE );
-        return false;
-    }
-    
-    auto graphic = in_device->GetQueue( CRVK_DEVICE_QUEUE_GRAPHICS ); // get the graphic qeue
-    if ( graphic == nullptr )
-    {
-        crvkAppendError( "crvkSwapchain::Create::NO GRAPHIC QUEUE FOUND", VK_INCOMPLETE );
-        return false;
-    }
-
-    queueFamilyIndices[0] = present->Family();
-    queueFamilyIndices[1] = graphic->Family();
     
     // we hava a independent present queue 
     if (queueFamilyIndices[0] != queueFamilyIndices[1] ) 

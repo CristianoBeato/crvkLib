@@ -22,16 +22,15 @@
 #ifndef __CRVK_PRECOMPILED_HPP__
 #define __CRVK_PRECOMPILED_HPP__
 
-#include <iostream> // std::cerr 
-#include <cstdint> // int32_t, uint32_, int16_t, uint16_t, UINT32_MAX 
-#include <cstring> // std::memcpy, std::strcmp
-#include <stdexcept> // std::runtime_error
-#include <exception> // std::exeption
-#include <algorithm> // std::clamp, std::min, std::max
-#include <cstdio> // std::snprintf
-#include <limits> // std::numeric_limits
-#include <atomic> // std::atomic
-
+#include <iostream>         // std::cerr 
+#include <cstdint>          // int32_t, uint32_, int16_t, uint16_t, UINT32_MAX 
+#include <cstring>          // std::memcpy, std::strcmp
+#include <stdexcept>        // std::runtime_error
+#include <exception>        // std::exeption
+#include <algorithm>        // std::clamp, std::min, std::max
+#include <cstdio>           // std::snprintf
+#include <limits>           // std::numeric_limits
+#include <atomic>           // std::atomic
 #include <SDL3/SDL_assert.h> // SDL_assert
 #include <SDL3/SDL_stdinc.h> // SDL_malloc, SDL_realloc, SDL_free
 

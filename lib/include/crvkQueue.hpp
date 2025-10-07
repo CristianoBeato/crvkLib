@@ -33,6 +33,16 @@ typedef enum crvkQueueType_e : int8_t
     CRVK_DEVICE_QUEUE_TRANSFER
 } crvkQueueType_t;
 
+typedef struct crvkQueueInfo_t
+{
+    bool        present = false;    // true if suport presenting
+    bool        graphic = false;    // true if are a valid graphic queue
+    bool        compute = false;    // true for suport 
+    bool        transfer = false;
+    uint32_t    family = UINT32_MAX;
+    uint32_t    index = UINT32_MAX;
+} crvkQueueInfo_t;
+
 class crvkDeviceQueue
 {
 public:

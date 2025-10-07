@@ -35,6 +35,8 @@ public:
 
     /// @brief Create the swapchain 
     /// @param in_device 
+    /// @param in_graphic the device graphic queue
+    /// @param in_present the device present queue
     /// @param in_frames the number of concurrent frames that we can roll whit the swapchain
     /// @param in_extent the swapchain images proportion
     /// @param in_surfaceformat the image format of the swapchain 
@@ -43,7 +45,9 @@ public:
     /// @param in_recreate if we are reacreatin the swapchain
     /// @return true on sucess, false on error 
     virtual bool  Create(   const crvkContext* in_context,
-                    const crvkDevice* in_device, 
+                    const crvkDevice* in_device,
+                    const crvkDeviceQueue* in_graphic,
+                    const crvkDeviceQueue* in_present,
                     const uint32_t in_frames, 
                     const VkExtent2D in_extent, 
                     const VkSurfaceFormatKHR in_surfaceformat, 

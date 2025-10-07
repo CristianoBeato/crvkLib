@@ -28,98 +28,34 @@ typedef struct crvkDeviceSuportedFeatures_t
     bool copyCommands2Enabled = false;
 } crvkDeviceSuportedFeatures_t;
 
-typedef enum crvkQueueType
-{
-    CRVK_DEVICE_QUEUE_NONE = -1,
-    CRVK_DEVICE_QUEUE_GRAPHICS,
-    CRVK_DEVICE_QUEUE_PRESENT,
-    CRVK_DEVICE_QUEUE_COMPUTE,
-    CRVK_DEVICE_QUEUE_TRANSFER
-} crvkQueueType;
-
-class crvkDeviceQueue
-{
-public:
-
-
-    VkResult Submit( 
-                    const VkSemaphoreSubmitInfo* in_waitSemaphoreInfos,
-                    const uint32_t in_waitSemaphoreInfoCount,
-                    const VkCommandBufferSubmitInfo* in_commandBufferInfos,
-                    const uint32_t in_commandBufferInfoCount,
-                    const VkSemaphoreSubmitInfo* in_signalSemaphoreInfos,
-                    const uint32_t in_signalSemaphoreInfoCount, 
-                    const VkFence in_fence );
-
-    VkResult Submit( 
-        const VkCommandBuffer* in_commandBuffers, 
-        const uint32_t in_commandBuffersCount, 
-        const VkSemaphore* in_waitSemaphores,
-        const uint32_t in_waitSemaphoresCount,
-        const VkSemaphore* in_signalSemaphores,
-        const uint32_t in_signalSemaphoresCount );
-
-    VkResult    Present( 
-        const VkSwapchainKHR* in_swapchains,
-        const uint32_t* in_imageIndices,
-        const uint32_t in_swapchainCount,
-        const VkSemaphore* in_waitSemaphores,
-        const uint32_t in_waitSemaphoresCount );
-
-    VkResult    WaitIdle( void ) const;
-
-    /// @brief Queue family index
-    /// @return UINT32_MAX if not valid
-    uint32_t    Family( void ) const { return m_family; }
-
-    /// @brief Queue index 
-    /// @return UINT32_MAX if not valid 
-    uint32_t    Index( void ) const { return m_family; }
-
-    /// @brief
-    /// @return 
-    VkQueue         Queue( void ) const { return m_queue; }
-
-    /// @brief  
-    /// @return 
-    VkCommandPool   CommandPool( void ) const { return m_commandPool; }
-
-protected:
-    friend class crvkDevice;
-    crvkDeviceQueue( const uint32_t in_family, const uint32_t in_index, const crvkQueueType in_type );
-    ~crvkDeviceQueue( void );
-    bool    InitQueue( const VkDevice in_device );
-
-private:
-    crvkQueueType   m_type;
-    uint32_t        m_family;
-    uint32_t        m_index;
-    VkQueue         m_queue;
-    VkCommandPool   m_commandPool;
-    VkDevice        m_device;
-
-    crvkDeviceQueue( const crvkDeviceQueue & ) = delete;
-    crvkDeviceQueue operator=( const crvkDeviceQueue & ) = delete;
-};
-
+typedef struct crvkDeviceHandle_t crvkDeviceHandle_t;
 typedef struct glslang_resource_s glslang_resource_t;
 class crvkDevice
 {
 public:
+    crvkDevice( void );
+    ~crvkDevice( void );
+
     bool    Create( const char** in_layers, const uint32_t in_layersCount, const char** in_deviceExtensions, const uint32_t in_deviceExtensionsCount );
     void    Destroy( void );
 
-    VkPhysicalDevice            PhysicalDevice( void ) const { return m_physicalDevice; }    
-    VkDevice                    Device( void ) const { return m_logicalDevice; }
-    crvkDeviceQueue*            GetQueue( const crvkQueueType in_type ) const;
-    bool                        HasPresentQueue( void ) const;
-    bool                        HasComputeQueue( void ) const;
-    bool                        HasTransferQueue( void ) const;
+    VkPhysicalDevice            PhysicalDevice( void ) const;    
+    VkDevice                    Device( void ) const;
+    crvkQueueInfo_t*            GetQueueInfo( uint32_t* in_count ) const;
     VkSurfaceCapabilitiesKHR    SurfaceCapabilities( void ) const;
     uint32_t                    FindBestImageCount( const uint32_t in_frames );
+
+    /// @brief Get the list of available present modes by the surface and device
+    /// @param in_count if not NULL, return the count of available elements
+    /// @return the array os present modes suported 
+    const VkPresentModeKHR*     GetSuportedPresentModes( uint32_t *in_count ) const;
+    
+    /// @brief Get the list of device available surface formats
+    /// @param in_count if not NULL, return the count of available elements 
+    /// @return an array of suported surface formats 
+    const VkSurfaceFormat2KHR*  GetSuportedSurfaceFormat( uint32_t *in_count ) const;
+
     VkExtent2D                  FindExtent( const uint32_t in_width, const uint32_t in_height ) const;
-    VkPresentModeKHR            FindPresentMode( const VkPresentModeKHR in_presentMode ) const;
-    VkSurfaceFormatKHR          FindSurfaceFormat( const VkFormat in_format, const VkColorSpaceKHR in_colorSpace ) const;
     uint32_t                    FindMemoryType( uint32_t typeFilter, VkMemoryPropertyFlags properties ) const;
     const bool                  CheckExtensionSupport( const char* in_extension );
     const glslang_resource_t*   BuiltInShaderResource( void ) const;     
@@ -127,43 +63,19 @@ public:
 protected:
     friend class crvkContext;
     friend class crvkBufferStaging;
-    // we can't create a new class reference outside from crvkContext
-    crvkDevice( void );
-    ~crvkDevice( void );
     bool    InitDevice( const crvkContext* in_context, const VkPhysicalDevice in_device );
-    void    Clear( void );
-
-    const bool TimelineSemaphoreAvailable( void ) const { return m_featuresv12.timelineSemaphore; }
-
+ 
 private:
+    crvkDeviceHandle_t*                             m_handle;    
     crvkDeviceSuportedFeatures_t                    m_deviceSuportedFeatures;
-    VkPhysicalDeviceProperties2                     m_propertiesv10;
-    VkPhysicalDeviceVulkan11Properties              m_propertiesv11;
-    VkPhysicalDeviceVulkan12Properties              m_propertiesv12;
-    VkPhysicalDeviceVulkan13Properties              m_propertiesv13;
-    VkPhysicalDeviceTransformFeedbackPropertiesEXT  m_propertiesTransformFeedback;
-    VkPhysicalDeviceFeatures2                       m_featuresv10;
-    VkPhysicalDeviceVulkan12Features                m_featuresv11;
-    VkPhysicalDeviceVulkan12Features                m_featuresv12;
-    VkPhysicalDeviceVulkan13Features                m_featuresv13;
-    VkPhysicalDeviceTransformFeedbackFeaturesEXT    m_featuresTransformFeedback;
-    VkSurfaceCapabilities2KHR                       m_surfaceCapabilities;
-    VkPhysicalDeviceMemoryProperties2               m_memoryProperties;
-    crvkDynamicVector<VkSurfaceFormat2KHR>          m_surfaceFormats;
-    VkPhysicalDevice                                m_physicalDevice;
-    VkDevice                                        m_logicalDevice;
-    crvkPointer<glslang_resource_t>                 m_shaderBuiltInResource;
-    crvkContext*                                    m_context;
-    crvkDynamicVector<VkExtensionProperties>        m_availableExtensions;
-    crvkDynamicVector<VkPresentModeKHR>             m_presentModes;
-    crvkDynamicVector<VkQueueFamilyProperties>      m_queueFamilies;
-    crvkDeviceQueue*                                m_queues[4];
 
-    void    FindQueues( crvkDynamicVector<VkDeviceQueueCreateInfo> &queueCreateInfos );
+    void        InitializeBuiltInShaderResources( void );
+    void        AquireDeviceProperties( void );
+    bool        AquireDeviceQueues( const VkPhysicalDeviceSurfaceInfo2KHR in_deviceSurfaceInfo );
+    bool        AquireDeviceSurfaceProperties( const VkPhysicalDeviceSurfaceInfo2KHR in_deviceSurfaceInfo );
+    bool        AquireDeviceFeatures( const VkPhysicalDeviceSurfaceInfo2KHR in_deviceSurfaceInfo );
 
-    void    InitializeBuiltInShaderResources( void );
-
-    // delete refernce 
+    // delete referencing 
     crvkDevice( const crvkDevice & ) = delete;
     crvkDevice operator=( const crvkDevice &) = delete;
 };
