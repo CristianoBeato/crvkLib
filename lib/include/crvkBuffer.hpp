@@ -22,6 +22,10 @@
 #ifndef __CRVK_BUFFER_HPP__
 #define __CRVK_BUFFER_HPP__
 
+typedef struct crvkBufferHandler_t;
+typedef struct crvkBufferStaticHandler_t;
+typedef struct crvkBufferStagingHandler_t;
+
 enum crvkBufferMapAccess_t : uint8_t
 {
     CRVK_BUFFER_MAP_ACCESS_NONE = 0, // not mapped 
@@ -41,7 +45,6 @@ enum crvkBufferState_t : uint8_t
     CRVK_BUFFER_STATE_CPU_COPY_DST          /// buffer is going to be used on CPU copy operation as destine
 };
 
-typedef struct crvkBufferHandler_t;
 
 /// @brief our buffer base structure 
 class crvkBuffer 
@@ -52,11 +55,18 @@ public:
 
     /// @brief Create the buffer object and allocate memory 
     /// @param in_device the orgin buffer 
+    /// @param in_graphic the graphic queue used for render
+    /// @param in_tranfer transhfer queue used for copy ( can be nullptr to ignore )
     /// @param in_size buffer size ( this is double on crvkBufferStaging )
     /// @param in_usage buffer usage 
     /// @param in_flags 
     /// @return 
-    virtual bool        Create( const crvkDevice* in_device, const size_t in_size, const VkBufferUsageFlags in_usage, const VkMemoryPropertyFlags in_flags );
+    virtual bool        Create( const crvkDevice* in_device,
+                                const crvkDeviceQueue* in_graphic,
+                                const crvkDeviceQueue* in_tranfer,
+                                const size_t in_size, 
+                                const VkBufferUsageFlags in_usage, 
+                                const VkMemoryPropertyFlags in_flags );
 
     /// @brief 
     /// @param  
@@ -102,7 +112,7 @@ public:
     /// @param in_commandBuffer 
     /// @param in_state 
     /// @param in_dstQueue 
-    virtual void        StateTransition( const VkCommandBuffer in_commandBuffer, const crvkBufferState_t in_state, const uint32_t in_dstQueue );
+    virtual void        StateTransition( const VkCommandBuffer in_commandBuffer, const crvkBufferState_t in_state, const uint32_t in_dstQueueFamily );
 
     /// @brief 
     /// @param  
@@ -123,7 +133,18 @@ public:
     crvkBufferStatic( void );
     ~crvkBufferStatic( void );
 
-    virtual bool Create( const crvkDevice* in_deviceProps, const size_t in_size, const VkBufferUsageFlags in_usage, const VkMemoryPropertyFlags in_flags ) override;
+    /// @brief Create the command buffer object
+    /// @param in_deviceProps 
+    /// @param in_size 
+    /// @param in_usage 
+    /// @param in_flags 
+    /// @return 
+    virtual bool Create(    const crvkDevice* in_deviceProps, 
+                            const crvkDeviceQueue* in_graphic,
+                            const crvkDeviceQueue* in_tranfer,
+                            const size_t in_size, 
+                            const VkBufferUsageFlags in_usage, 
+                            const VkMemoryPropertyFlags in_flags ) override;
     virtual void Destroy( void ) override;
     
     /// @brief 
@@ -135,12 +156,14 @@ public:
     virtual void        Unmap( const crvkBufferState_t in_state );
 
 protected:
+    uint32_t            m_transferFamily; //
     uintptr_t           m_mapOffset;
     size_t              m_mapSize;
     uint64_t            m_useValue;
     uint64_t            m_copyValue;
     VkSemaphore         m_copySemaphore;
-    VkSemaphore         m_useSemaphore;    
+    VkSemaphore         m_useSemaphore;
+    VkCommandPool       m_commandPool;
     VkCommandBuffer     m_commandBuffer;
     crvkDevice*         m_device;
 
@@ -169,12 +192,24 @@ class crvkBufferStaging : public crvkBufferStatic
 public:
     crvkBufferStaging( void );
     ~crvkBufferStaging( void );
-    virtual bool    Create( const crvkDevice* in_deviceProps, const size_t in_size, const VkBufferUsageFlags in_usage, const VkMemoryPropertyFlags in_flags ) override;
+    
+    virtual bool    Create( const crvkDevice* in_deviceProps,
+                            const crvkDeviceQueue* in_graphic,
+                            const crvkDeviceQueue* in_tranfer, 
+                            const size_t in_size, 
+                            const VkBufferUsageFlags in_usage, 
+                            const VkMemoryPropertyFlags in_flags ) override;
+                            
     virtual void    Destroy( void ) override;
+    
     virtual void    SubData( const void* in_data, const uintptr_t in_offset, const size_t in_size ) const override;
+    
     virtual void    GetSubData( void* in_data, const uintptr_t in_offset, const size_t in_size ) const override;
+    
     virtual void*   Map( const uintptr_t in_offset, const size_t in_size, const crvkBufferMapAccess_t in_acces ) override;
+    
     virtual void    Unmap( void ) override;
+    
     virtual void    Flush( const uintptr_t in_offset, const size_t in_size ) const override;
     
 private:

@@ -23,16 +23,21 @@
 
 typedef struct crvkBufferHandler_t
 {
-    uint32_t                queue;      // buffer current queue
-    VkBufferUsageFlags      usage;      // buffer usage 
-    VkMemoryPropertyFlags   property;   // memory properties 
-    VkPipelineStageFlags2   stage;      // current buffer pipeline stage
-    VkAccessFlags2          access;     // buffer acess flags
-    VkBuffer                buffer;     // buffer handler 
-    VkDeviceMemory          memory;     // buffer memory acess 
-    VkDevice                device;     // buffer device handler
+    uint32_t                family;   // buffer current queue
+    VkBufferUsageFlags      usage;          // buffer usage 
+    VkMemoryPropertyFlags   property;       // memory properties 
+    VkPipelineStageFlags2   stage;          // current buffer pipeline stage
+    VkAccessFlags2          access;         // buffer acess flags
+    VkBuffer                buffer;         // buffer handler 
+    VkDeviceMemory          memory;         // buffer memory acess 
+    VkQueue                 queue;          // current queue handle
+    VkDevice                device;         // buffer device handler
 } crvkBufferHandler_t;
 
+typedef struct crvkBufferStagingHandler_t : public crvkBufferHandler_t
+{
+    
+} crvkBufferStagingHandler_t;
 
 /*
 ==============================================
@@ -65,7 +70,12 @@ crvkBuffer::~crvkBuffer(void)
 crvkBuffer::Create
 ==============================================
 */
-bool crvkBuffer::Create( const crvkDevice* in_device, const size_t in_size, const VkBufferUsageFlags in_usage, const VkMemoryPropertyFlags in_flags )
+bool crvkBuffer::Create(    const crvkDevice* in_device,
+                            const crvkDeviceQueue* in_graphic,
+                            const crvkDeviceQueue* in_tranfer, 
+                            const size_t in_size, 
+                            const VkBufferUsageFlags in_usage, 
+                            const VkMemoryPropertyFlags in_flags )
 {
     VkMemoryRequirements memRequirements;
     VkResult result = VK_SUCCESS;
@@ -73,18 +83,29 @@ bool crvkBuffer::Create( const crvkDevice* in_device, const size_t in_size, cons
     m_bufferHandler->device = in_device->Device();
     m_bufferHandler->usage = in_usage;
     m_bufferHandler->property = in_flags;
-    m_bufferHandler->queue = VK_QUEUE_FAMILY_IGNORED;
-
+    
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     bufferInfo.size = in_size;
     bufferInfo.usage = in_usage;
-
+    
     // we use tranfer queue for buffer content
-    if( in_device->HasTransferQueue() )
-        bufferInfo.sharingMode = VK_SHARING_MODE_CONCURRENT;
+    if( in_tranfer != nullptr )
+    {
+        m_bufferHandler->family = in_tranfer->Family();
+        m_bufferHandler->queue = in_tranfer->Queue();
+
+        if( in_tranfer->Family() != in_graphic->Family() )
+            bufferInfo.sharingMode = VK_SHARING_MODE_CONCURRENT;
+        else
+            bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    }
     else
+    {
+        m_bufferHandler->queue = in_graphic->Queue();
+        m_bufferHandler->family = in_graphic->Family();
         bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    }
 
     result = vkCreateBuffer( m_bufferHandler->device, &bufferInfo, k_allocationCallbacks, &m_bufferHandler->buffer );
     if ( result != VK_SUCCESS) 
@@ -189,15 +210,14 @@ void crvkBuffer::Flush( const uintptr_t in_offset, const size_t in_size ) const
     vkFlushMappedMemoryRanges( m_bufferHandler->device, 1, &range );
 }
 
-
 /*
 ==============================================
 crvkBuffer::StateTransition
 ==============================================
 */
-void crvkBuffer::StateTransition( const VkCommandBuffer in_commandBuffer, const crvkBufferState_t in_state, const uint32_t in_dstQueue )
+void crvkBuffer::StateTransition( const VkCommandBuffer in_commandBuffer, const crvkBufferState_t in_state, const uint32_t in_dstQueueFamily )
 {
-    uint32_t queue = in_dstQueue;
+    uint32_t family = in_dstQueueFamily;
     VkPipelineStageFlags2   stage = VK_PIPELINE_STAGE_2_NONE;
     VkAccessFlags2          access = VK_ACCESS_2_NONE;
 
@@ -282,7 +302,7 @@ void crvkBuffer::StateTransition( const VkCommandBuffer in_commandBuffer, const 
     }
 
     // nothing to change
-    if (( stage == m_bufferHandler->stage ) && ( access == m_bufferHandler->access ) && ( in_dstQueue == m_bufferHandler->queue ) )
+    if (( stage == m_bufferHandler->stage ) && ( access == m_bufferHandler->access ) && ( family == m_bufferHandler->family ) )
         return;
 
     VkBufferMemoryBarrier2 barrier{};
@@ -292,12 +312,12 @@ void crvkBuffer::StateTransition( const VkCommandBuffer in_commandBuffer, const 
     // source state
     barrier.srcStageMask = m_bufferHandler->stage;
     barrier.srcAccessMask = m_bufferHandler->access;
-    barrier.srcQueueFamilyIndex = m_bufferHandler->queue;
+    barrier.srcQueueFamilyIndex = m_bufferHandler->family;
     
     // destine state 
     barrier.dstStageMask = stage;
     barrier.dstAccessMask = access;
-    barrier.dstQueueFamilyIndex = queue;
+    barrier.dstQueueFamilyIndex = family;
     
     // since we map the current buffer state, we change whole the buffer, not only some regions 
     barrier.buffer = m_bufferHandler->buffer;
@@ -317,7 +337,7 @@ void crvkBuffer::StateTransition( const VkCommandBuffer in_commandBuffer, const 
     vkCmdPipelineBarrier2( in_commandBuffer, &depInfo );
 
     // update buffer state
-    m_bufferHandler->queue = queue;
+    m_bufferHandler->family = family;
     m_bufferHandler->stage = stage;
     m_bufferHandler->access = access;
 }
@@ -365,17 +385,26 @@ crvkBufferStatic::~crvkBufferStatic( void )
 crvkBufferStatic::Create
 ==============================================
 */
-bool crvkBufferStatic::Create( const crvkDevice* in_device, const size_t in_size, const VkBufferUsageFlags in_usage, const VkMemoryPropertyFlags in_flags )
+bool crvkBufferStatic::Create(  const crvkDevice* in_device,
+                                const crvkDeviceQueue* in_graphic,
+                                const crvkDeviceQueue* in_tranfer,
+                                const size_t in_size, 
+                                const VkBufferUsageFlags in_usage, 
+                                const VkMemoryPropertyFlags in_flags )
 {
     VkResult result = VK_SUCCESS;
-    crvkDeviceQueue* queue = nullptr;
     VkDevice device = nullptr; 
     m_device = const_cast<crvkDevice*>( in_device );
     device = in_device->Device();
 
-    if( !crvkBuffer::Create( in_device, in_size, in_usage, in_flags ) )
+    if( !crvkBuffer::Create( in_device, in_graphic, in_tranfer, in_size, in_usage, in_flags ) )
         return false;
 
+    if ( in_tranfer != nullptr )
+        m_transferFamily = in_tranfer->Family();
+    else
+        m_transferFamily = in_graphic->Family();
+    
     ///
     /// Create semaphores 
     /// ==========================================================================
@@ -409,10 +438,10 @@ bool crvkBufferStatic::Create( const crvkDevice* in_device, const size_t in_size
     }
 
     ///
-    if( m_device->HasTransferQueue() )
-        queue = m_device->GetQueue( CRVK_DEVICE_QUEUE_TRANSFER );
+    if( in_tranfer != nullptr )
+        m_commandPool = in_tranfer->CommandPool();
     else
-        queue = m_device->GetQueue( CRVK_DEVICE_QUEUE_TRANSFER );
+        m_commandPool = in_graphic->CommandPool();
 
     ///
     /// Create command buffer  
@@ -420,7 +449,7 @@ bool crvkBufferStatic::Create( const crvkDevice* in_device, const size_t in_size
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.pNext = nullptr;
-    allocInfo.commandPool = queue->CommandPool(); // get the command pool form available queue 
+    allocInfo.commandPool = m_commandPool; // get the command pool form available queue 
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocInfo.commandBufferCount = 1;
     result = vkAllocateCommandBuffers(device, &allocInfo, &m_commandBuffer ); 
@@ -445,11 +474,7 @@ void crvkBufferStatic::Destroy( void )
     // release the buffer operation command buffer 
     if ( m_commandBuffer != nullptr )
     {
-        if ( m_device->HasComputeQueue() )
-            vkFreeCommandBuffers( device, m_device->GetQueue(CRVK_DEVICE_QUEUE_TRANSFER)->CommandPool(), 1, &m_commandBuffer );
-        else
-            vkFreeCommandBuffers( device, m_device->GetQueue(CRVK_DEVICE_QUEUE_GRAPHICS)->CommandPool(), 1, &m_commandBuffer );
-            
+        vkFreeCommandBuffers( device, m_commandPool, 1, &m_commandBuffer );    
         m_commandBuffer = nullptr;
     }
 
@@ -476,12 +501,6 @@ crvkBufferStatic::CopyFromBuffer
 void crvkBufferStatic::CopyFromBuffer( const VkBuffer in_srcBuffer, const VkBufferCopy2* in_regions, const uint32_t in_count ) 
 {
     VkResult result = VK_SUCCESS;
-    crvkDeviceQueue * queue = nullptr;
-
-    if ( m_device->HasTransferQueue() )
-        queue = m_device->GetQueue( CRVK_DEVICE_QUEUE_TRANSFER );
-    else
-        queue = m_device->GetQueue( CRVK_DEVICE_QUEUE_GRAPHICS );       
 
     // reset the command buffer before start using 
     result = vkResetCommandBuffer( m_commandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT );
@@ -503,7 +522,7 @@ void crvkBufferStatic::CopyFromBuffer( const VkBuffer in_srcBuffer, const VkBuff
     }
 
     // change the buffer state to recive content
-    crvkBuffer::StateTransition( m_commandBuffer, CRVK_BUFFER_STATE_GPU_COPY_DST, queue->Family() );
+    crvkBuffer::StateTransition( m_commandBuffer, CRVK_BUFFER_STATE_GPU_COPY_DST, m_transferFamily );
 
     // perform the copy of the buffer conent 
     VkCopyBufferInfo2   copyBufferInfo{};
@@ -529,7 +548,10 @@ void crvkBufferStatic::CopyFromBuffer( const VkBuffer in_srcBuffer, const VkBuff
     commandBufferSubmitInfo.commandBuffer = m_commandBuffer;
     
     // signal to GPU to wait for the copy end before use
-    VkSemaphoreSubmitInfo signalInfo = SignalLastCopy();
+    VkSemaphoreSubmitInfo signalInfo[1] = 
+    {
+        SignalLastCopy()
+    };
    
     // Wait for the last copy to finish, or buffer to be released  
     VkSemaphoreSubmitInfo waitInfo[2] = 
@@ -538,7 +560,16 @@ void crvkBufferStatic::CopyFromBuffer( const VkBuffer in_srcBuffer, const VkBuff
         WaitLastUse(),
     };
 
-    result = queue->Submit( waitInfo, 2, &commandBufferSubmitInfo, 1, &signalInfo, 1, nullptr );
+     // 
+    VkSubmitInfo2 submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+    submitInfo.waitSemaphoreInfoCount = 2;
+    submitInfo.pWaitSemaphoreInfos = waitInfo;
+    submitInfo.commandBufferInfoCount = 1;
+    submitInfo.pCommandBufferInfos = &commandBufferSubmitInfo;
+    submitInfo.signalSemaphoreInfoCount = 1;
+    submitInfo.pSignalSemaphoreInfos = signalInfo;
+    result = vkQueueSubmit2( m_bufferHandler->queue, 1, &submitInfo, nullptr );
     if( result != VK_SUCCESS )
     {
         crvkAppendError( "crvkBufferStaging::SubData::vkQueueSubmit2", result );
@@ -597,12 +628,16 @@ void crvkBufferStatic::CopyToBuffer( const VkBuffer in_dstBuffer, const VkBuffer
     waitInfo[0] = WaitLastCopy(); // wait device release the buffer 
     waitInfo[1] = WaitLastUse(); // wait for last copy end 
 
-    if ( m_device->HasTransferQueue() )
-        queue = m_device->GetQueue( CRVK_DEVICE_QUEUE_TRANSFER );
-    else
-        queue = m_device->GetQueue( CRVK_DEVICE_QUEUE_GRAPHICS );
-
-    queue->Submit( waitInfo, 2, &commandBufferSubmitInfo, 1, &signalInfo, 1, nullptr );
+    // submit 
+    VkSubmitInfo2 submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+    submitInfo.waitSemaphoreInfoCount = 2;
+    submitInfo.pWaitSemaphoreInfos = waitInfo;
+    submitInfo.commandBufferInfoCount = 1;
+    submitInfo.pCommandBufferInfos = &commandBufferSubmitInfo;
+    submitInfo.signalSemaphoreInfoCount = 1;
+    submitInfo.pSignalSemaphoreInfos = &signalInfo;
+    vkQueueSubmit2( m_bufferHandler->queue, 1, &submitInfo, nullptr );
 }
 
 /*
@@ -624,13 +659,7 @@ void *crvkBufferStatic::Map( const uintptr_t in_offset, const size_t in_size, co
 {
     VkResult result = VK_SUCCESS;
     crvkBufferState_t state = CRVK_BUFFER_STATE_CPU_COPY_SRC;
-    crvkDeviceQueue* queue = nullptr;
     void* pointer = nullptr;
-
-    if ( m_device->HasTransferQueue() )
-        queue = m_device->GetQueue( CRVK_DEVICE_QUEUE_TRANSFER );
-    else
-        queue = m_device->GetQueue( CRVK_DEVICE_QUEUE_GRAPHICS );
 
     // reset the command buffer before start using 
     result = vkResetCommandBuffer( m_commandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT );
@@ -657,7 +686,7 @@ void *crvkBufferStatic::Map( const uintptr_t in_offset, const size_t in_size, co
         state = CRVK_BUFFER_STATE_CPU_COPY_DST;
 
     // change the buffer state to recive content
-    crvkBuffer::StateTransition( m_commandBuffer, state, queue->Family() );
+    crvkBuffer::StateTransition( m_commandBuffer, state, m_transferFamily );
 
     vkMapMemory( m_device->Device(), m_bufferHandler->memory, in_offset, in_size, 0, &pointer );
     
@@ -671,16 +700,9 @@ crvkBufferStatic::Unmap
 */
 void crvkBufferStatic::Unmap( const crvkBufferState_t in_state )
 {
-    crvkDeviceQueue* queue = nullptr;
-
-    if ( m_device->HasTransferQueue() )
-        queue = m_device->GetQueue( CRVK_DEVICE_QUEUE_TRANSFER );
-    else
-        queue = m_device->GetQueue( CRVK_DEVICE_QUEUE_GRAPHICS );
-
     // release memory acess
     vkUnmapMemory( m_device->Device(), m_bufferHandler->memory );
-    crvkBuffer::StateTransition( m_commandBuffer, in_state, queue->Family() );
+    crvkBuffer::StateTransition( m_commandBuffer, in_state, m_transferFamily );
 
     //
     vkEndCommandBuffer( m_commandBuffer );
@@ -698,7 +720,16 @@ void crvkBufferStatic::Unmap( const crvkBufferState_t in_state )
     waitInfo[0] = WaitLastCopy(); // wait device release the buffer 
     waitInfo[1] = WaitLastUse(); // wait for last copy end 
 
-    queue->Submit( waitInfo, 2, &commandBufferSubmitInfo, 1, &signalInfo, 1, nullptr );
+    // submit 
+    VkSubmitInfo2 submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+    submitInfo.waitSemaphoreInfoCount = 2;
+    submitInfo.pWaitSemaphoreInfos = waitInfo;
+    submitInfo.commandBufferInfoCount = 1;
+    submitInfo.pCommandBufferInfos = &commandBufferSubmitInfo;
+    submitInfo.signalSemaphoreInfoCount = 1;
+    submitInfo.pSignalSemaphoreInfos = &signalInfo;
+    vkQueueSubmit2( m_bufferHandler->queue, 1, &submitInfo, nullptr );
 }
 
 /*
@@ -770,22 +801,21 @@ crvkBufferStaging::~crvkBufferStaging( void )
 crvkBufferStaging::Create
 ==============================================
 */
-bool crvkBufferStaging::Create( const crvkDevice* in_device, const size_t in_size, const VkBufferUsageFlags in_usage, const VkMemoryPropertyFlags in_flags )
+bool crvkBufferStaging::Create( const crvkDevice* in_device,
+                                const crvkDeviceQueue* in_graphic,
+                                const crvkDeviceQueue* in_tranfer,                            
+                                const size_t in_size, 
+                                const VkBufferUsageFlags in_usage, 
+                                const VkMemoryPropertyFlags in_flags )
 {
     uint32_t queues[2]{ 0, 0 };
     VkResult result = VK_SUCCESS;
     VkDevice device = nullptr;
-    crvkDeviceQueue* graphics = nullptr;
-    crvkDeviceQueue* tranfer = nullptr;
     VkMemoryRequirements memRequirements;
 
-    if( !crvkBufferStatic::Create( in_device, in_size, in_usage, in_flags | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT ) )
+    if( !crvkBufferStatic::Create( in_device, in_graphic, in_tranfer, in_size, in_usage, in_flags | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT ) )
         return false;
 
-    // get queues 
-    graphics = in_device->GetQueue( CRVK_DEVICE_QUEUE_GRAPHICS );
-    tranfer = in_device->GetQueue( CRVK_DEVICE_QUEUE_TRANSFER );
-    
     //
     // Create the CPU side buffer 
     // ==========================================================================
@@ -794,10 +824,10 @@ bool crvkBufferStaging::Create( const crvkDevice* in_device, const size_t in_siz
     cpuBufferCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT; // this is a staging buffer on CPU side
     cpuBufferCI.size = in_size;
 
-    if ( m_device->HasTransferQueue() )
-        queues[0] = tranfer->Family();
+    if ( in_tranfer != nullptr )
+        queues[0] = in_tranfer->Family();
     else
-        queues[0] = graphics->Family();
+        queues[0] = in_graphic->Family();
 
     cpuBufferCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE; // only graphic or only transfer use this buffer 
     cpuBufferCI.queueFamilyIndexCount = 1;
